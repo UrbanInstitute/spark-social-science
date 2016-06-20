@@ -11,6 +11,11 @@ This guide illustrates the (relatively) straight forward process to provide clus
 	<li>https://github.com/UrbanInstitute/pyspark-tutorials</li>
 </ul>
 
+### Security Disclaimer:
+
+I am not a security expert and this guide does not specify security specifics necessary for secure data analysis. There are many important security considerations when doing data analysis in the cloud that this guide does not cover. Please make sure to consult with security experts whenever working in cloud compute.
+
+
 ## Setup 
 
 Just a few steps will get you to working Spark Clusters. We're going to setup the bootstrap scripts first, then the CloudFormation script. Note that all the required changes that you need to make involve replacing text that contains the phrase 'goes-here'. Search for that phrase within the CloudFormation script and bootstrap files to make sure you have replaced all those text fields.
@@ -30,6 +35,22 @@ The CloudFormation Script needs a few changes to work as well.
 	<li>Replace the phrase 'your-bucket-name-goes-here' with the name of the bucket you created a minute ago for your bootstrap scripts.</li>
 	<li>Create a new S3 bucket for the logs from your clusters, and replace the phrase "logs-bucket-goes-here" with the name of your new bucket.</li>
 	<li>Change the CIDR IP to your organzation's or your personal computer's IP. This will only allow your organizatinor your computer to acces the ports you are opening for RStudio / Jupyter / Ganglia. This is optional, but know that if you do not do this, <font3 color="red">anyone can access your cluster at these ports.</style></li>
+</ul>
+
+
+### 3. Launch a Cluster
+
+<ul>
+	<li>Go to CloudFormation on the AWS Dashboard - Hit Create Stack</li> 
+	<li>Upload your CloudFormation Script - Hit Next</li>
+	<li>On the 'Specify Details' page, you need to make a few changes, though once you have these fiugred out you can add them to the CloudFormation script.</li>
+	<ul>
+		<li>Create a Stack Name</li>
+		<li>Set a Key Pair setup for your account (can set as a default within CloudFormation);</li>
+		<li>Set a VPC - the default VPC that came with your AWS account will work;</li>
+		<li>Set a Subnet (<a href="https://aws.amazon.com/about-aws/whats-new/2015/12/launch-amazon-emr-clusters-in-amazon-vpc-private-subnets/">can be private or public</a>);</li>
+		<li></li>
+	</ul>
 	<li>Go to your EMR dashboard and grab the DNS for the Master node. The whole string (seen below as 'ec2-54-89-114-32.compute-1.amazonaws.com') is your public DNS. <img src="./cluster-dns.png">
 		<br>You should then be able to go to these URLs:
 		<ul> 
@@ -38,7 +59,6 @@ The CloudFormation Script needs a few changes to work as well.
 			<li>Ganglia Cluster Monitoring at DNS/ganglia </li>
 		</ul>
 	</li>
-	<li>
 </ul>
 
 
