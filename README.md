@@ -49,7 +49,7 @@ The CloudFormation Script needs a few changes to work as well.
 		<li>Set a Key Pair setup for your account (can set as a default within CloudFormation);</li>
 		<li>Set a VPC - the default VPC that came with your AWS account will work;</li>
 		<li>Set a Subnet (<a href="https://aws.amazon.com/about-aws/whats-new/2015/12/launch-amazon-emr-clusters-in-amazon-vpc-private-subnets/">can be private or public</a>);</li>
-		<li></li>
+		<li>Set other options as needed, including changing the number of cores, the type of EC2 instances, and the tags (you can, but I don't recommend changing the ports).</li>
 	</ul>
 	<li>Go to your EMR dashboard and grab the DNS for the Master node. The whole string (seen below as 'ec2-54-89-114-32.compute-1.amazonaws.com') is your public DNS. <img src="./cluster-dns.png">
 		<br>You should then be able to go to these URLs:
