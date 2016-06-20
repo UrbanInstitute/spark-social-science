@@ -1,0 +1,131 @@
+{
+	"AWSTemplateFormatVersion": "2010-09-09",
+	"Description": "Provision a Spark/EMR cluster, with Python-Jupyter access",
+
+    "Metadata" : {
+		"AWS::CloudFormation::Interface" : {
+			"ParameterGroups" : [
+				{
+				"Label" : { "default" : "EMR Options" },
+				"Parameters" : ["EC2KeyName","VPC","Subnet","CoreNodeCount","InstanceType","OwnerTag","PurposeTag"]
+				}
+			]
+		}
+    },
+	"Parameters": {
+		"EC2KeyName": {
+			"Description": "SSH key pair to use for EMR node login",
+			"Type": "AWS::EC2::KeyPair::KeyName"
+		},
+		"VPC": {
+			"Description": "VPC for EMR nodes.",
+			"Type": "AWS::EC2::VPC::Id"
+			},
+		"Subnet": {
+			"Description": "Subnet for EMR nodes, from the VPC selected above",
+			"Type": "AWS::EC2::Subnet::Id"
+		},
+		"CoreNodeCount": {
+			"Description": "Number of core nodes to provision (1-20)",
+			"Type": "Number",
+			"MinValue" : "1",
+			"MaxValue" : "20",
+			"Default" : "3"
+		},
+		"InstanceType" : {
+			"Type" : "String",
+			"Default" : "m4.xlarge",
+			"AllowedValues" : ["m4.xlarge", "m4.2xlarge", "r3.xlarge", "r3.2xlarge", "r3.4xlarge", "r3.8xlarge"],
+			"Description" : "EMR node ec2 instance type - you can add more types by expanding on this list."
+		},
+		"OwnerTag" : {
+			"Type" : "String",
+			"MinLength" : 1,
+			"Description" : "Your name - used to tag the cluster"
+		},
+		"PurposeTag" : {
+			"Type" : "String",
+			"MinLength" : 1,
+			"Default" : "PySpark Deployment",
+			"Description" : "Purpose - used to tag the cluster"
+		},
+		"JupyterPort" : {
+			"Type" : "Number",
+			"Default" : 8192,
+			"Description" : "Jupyter Port"
+		},
+		"GangliaPort" : {
+			"Type" : "Number",
+			"Default" : 80,
+			"Description" : "Ganglia Port"
+		}
+	},
+	"Resources": {
+		"rAllowJupyter": {
+			"Type": "AWS::EC2::SecurityGroup",
+			"Properties": {
+				"GroupDescription": "Port 8192 for Jupyter server",
+				"VpcId": { "Ref" : "VPC" },
+				"SecurityGroupIngress": [{
+					"IpProtocol": "tcp",
+					"FromPort": { "Ref" : "JupyterPort" },
+					"ToPort": { "Ref" : "JupyterPort" },
+					"CidrIp": "0.0.0.0/0"
+				},{
+					"IpProtocol": "tcp",
+					"FromPort": { "Ref" : "GangliaPort" },
+					"ToPort": { "Ref" : "GangliaPort" },
+					"CidrIp": "0.0.0.0/0"
+				}]
+			}
+		},
+		
+		"PySparkCluster": {
+			"Type": "AWS::EMR::Cluster",
+			"Properties": {
+				"Applications": [
+					{ "Name" : "Hadoop"	}, 
+					{ "Name" : "SPARK" },
+					{ "Name" : "Ganglia" }
+				],
+				"BootstrapActions" : [{ 
+					"Name" : "Install-Python-Jupyter", 
+					"ScriptBootstrapAction" : { 
+					   "Path" : "s3://your-bucket-name-goes-here/jupyter_pyspark_emr4.sh"
+					} 
+				}],
+				"Instances": {
+					"AdditionalMasterSecurityGroups" : [{ "Fn::GetAtt" : ["rAllowJupyter","GroupId"] }],
+					"Ec2KeyName" : { "Ref" : "EC2KeyName" },
+					"Ec2SubnetId" : { "Ref" : "Subnet" },
+					"MasterInstanceGroup": {
+						"InstanceCount": 1,
+						"InstanceType": { "Ref" : "InstanceType" }
+					},
+					"CoreInstanceGroup": {
+						"InstanceCount": { "Ref" : "CoreNodeCount" },
+						"InstanceType": { "Ref" : "InstanceType" }
+					}
+				},
+				"Name": "pyspark-jupyter",
+				"JobFlowRole": "EMR_EC2_DefaultRole",
+				"ServiceRole": "EMR_DefaultRole",
+				"ReleaseLabel": "emr-4.7.0",
+				"LogUri": "s3://logs-bucket-goes-here",
+				"Tags": [
+					{ "Key": "Name", "Value": "pyspark-jupyter"},
+					{ "Key": "Owner",	"Value": { "Ref" : "OwnerTag" }},
+					{ "Key": "Purpose",	"Value": { "Ref" : "PurposeTag" }}
+				]
+			}
+		}
+	},
+	"Outputs" : {
+		"JupyterURL" : {
+			"Description": "The URL of Jupyter on your new PySpark/EMR cluster",  
+			"Value" : { "Fn::Join" : ["", ["http://", { "Fn::GetAtt" : [ "PySparkCluster", "MasterPublicDNS" ]}, ":", { "Ref" : "JupyterPort"} ]] }
+		}
+	}
+	
+}
+
