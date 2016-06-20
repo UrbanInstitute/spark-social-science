@@ -1,6 +1,6 @@
 # spark-social-science
 Automated Spark Cluster Builds with RStudio or PySpark for Policy Research.
-[Comments welcome @alexcengler]
+[Comments welcome on Github or on Twitter @alexcengler]
 
 The goal of this project is to deliver powerful and elastic Spark clusters to researchers and data analysts with as little setup time and effort possible. To do that, at the Urban Institute, we use two critical components: (1) a Amazon Web Services (AWS) CloudFormation script to launch AWS Elastic MapReduce (EMR) clusters (2) a bootstrap script that runs on the Master node of the new cluster to install statistical programs and development environments (RStudio and Jupyter Notebooks). 
 
@@ -13,7 +13,7 @@ This guide illustrates the (relatively) straight forward process to provide clus
 
 ## Setup 
 
-Just a few steps will get you to working Spark Clusters. We're going to setup the bootstrap scripts first, then the CloudFormation script. 
+Just a few steps will get you to working Spark Clusters. We're going to setup the bootstrap scripts first, then the CloudFormation script. Note that all the required changes that you need to make involve replacing text that contains the phrase 'goes-here'. Search for that phrase within the CloudFormation script and bootstrap files to make sure you have replaced all those text fields.
 
 ### 1. Setup Your Bootstrap Scripts
 
@@ -28,7 +28,7 @@ The CloudFormation Script needs a few changes to work as well.
 
 <ul>
 	<li></li>
-	<li></li>
+	<li>Change the CIDR IP to your organzation's or your personal computer's IP. This will only allow your organizatinor your computer to acces the ports you are opening for RStudio / Jupyter / Ganglia. This is optional, but know that if you do not do this, <style color="red">anyone can access your cluster at these ports.</style></li>
 	<li>Create a new S3 bucket for the logs from your clusters, and replace the phrase "logs-bucket-goes-here" with the name of your new bucket.</li>
 	<li>Go to your EMR dashboard and grab the DNS for the Master node. The whole string (seen below as 'ec2-54-89-114-32.compute-1.amazonaws.com') is your public DNS. <img src="./cluster-dns.png">
 		<br>You should then be able to go to these URLs:
