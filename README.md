@@ -30,7 +30,6 @@ First, create an AWS S3 bucket for your EMR scripts and logs. There are two boot
 
 The CloudFormation Script needs a few changes to work as well.
 
-
 <ul>
 	<li>Replace the phrase 'your-bucket-name-goes-here' with the name of the bucket you created a minute ago for your bootstrap scripts.</li>
 	<li>Create a new S3 bucket for the logs from your clusters, and replace the phrase "logs-bucket-goes-here" with the name of your new bucket.</li>
@@ -51,6 +50,7 @@ The CloudFormation Script needs a few changes to work as well.
 		<li>Set a Subnet (<a href="https://aws.amazon.com/about-aws/whats-new/2015/12/launch-amazon-emr-clusters-in-amazon-vpc-private-subnets/">can be private or public</a>);</li>
 		<li>Set other options as needed, including changing the number of cores, the type of EC2 instances, and the tags (you can, but I don't recommend changing the ports).</li>
 	</ul>
+	<li>Hit next at the bottom of this screen, add tags if you want on the next screen, and hit Create Cluster.</li>
 	<li>Go to your EMR dashboard and grab the DNS for the Master node. The whole string (seen below as 'ec2-54-89-114-32.compute-1.amazonaws.com') is your public DNS. <img src="./cluster-dns.png">
 		<br>You should then be able to go to these URLs:
 		<ul> 
