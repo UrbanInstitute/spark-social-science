@@ -1,5 +1,5 @@
 # spark-social-science
-Automated Spark Cluster Builds with RStudio or PySpark for Policy Research.
+Automated Spark Cluster Builds with RStudio or PySpark for Policy Research.<br>
 [Comments welcome on Github or on Twitter @alexcengler]
 
 The goal of this project is to deliver powerful and elastic Spark clusters to researchers and data analysts with as little setup time and effort possible. To do that, at the Urban Institute, we use two critical components: (1) a Amazon Web Services (AWS) CloudFormation script to launch AWS Elastic MapReduce (EMR) clusters (2) a bootstrap script that runs on the Master node of the new cluster to install statistical programs and development environments (RStudio and Jupyter Notebooks). 
