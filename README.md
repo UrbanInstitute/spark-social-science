@@ -27,20 +27,19 @@ The CloudFormation Script needs a few changes to work as well.
 
 
 <ul>
-	<li></li>
-	<li>Change the CIDR IP to your organzation's or your personal computer's IP. This will only allow your organizatinor your computer to acces the ports you are opening for RStudio / Jupyter / Ganglia. This is optional, but know that if you do not do this, <font color="red">anyone can access your cluster at these ports.</style></li>
+	<li>Replace the phrase 'your-bucket-name-goes-here' with the name of the bucket you created a minute ago for your bootstrap scripts.</li>
 	<li>Create a new S3 bucket for the logs from your clusters, and replace the phrase "logs-bucket-goes-here" with the name of your new bucket.</li>
+	<li>Change the CIDR IP to your organzation's or your personal computer's IP. This will only allow your organizatinor your computer to acces the ports you are opening for RStudio / Jupyter / Ganglia. This is optional, but know that if you do not do this, <font3 color="red">anyone can access your cluster at these ports.</style></li>
 	<li>Go to your EMR dashboard and grab the DNS for the Master node. The whole string (seen below as 'ec2-54-89-114-32.compute-1.amazonaws.com') is your public DNS. <img src="./cluster-dns.png">
 		<br>You should then be able to go to these URLs:
 		<ul> 
-			<li>RStudio at DNS:4747</li>
+			<li>RStudio at DNS:4747 - note that RStudio by default needs a username and password. These are set to 'hadoop' for both, and does affect how you are logged into the master node. We have run into errors changing this username and would be happy to hear about an alternative / fix.</li>
 			<li>Jupyter Notebooks at DNS:8192</li>
 			<li>Ganglia Cluster Monitoring at DNS/ganglia </li>
 		</ul>
 	</li>
-
+	<li>
 </ul>
-
 
 
 
