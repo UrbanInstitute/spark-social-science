@@ -12,10 +12,16 @@ This guide illustrates the (relatively) straight forward process to provide clus
 
 ## Setup 
 
-Just a few steps will get you to working Spark Clusters.
+Just a few steps will get you to working Spark Clusters. We're going to setup the bootstrap scripts first, then the CloudFormation script. 
+
+### Setup Your Bootstrap Scripts
+
+Bootstrap scripts run at the start of the cluster launch. We're going to host them in AWS S3, then reference them in our CloudFormation Template. So, everytime we launch a cluster, the bootstrap scripts will run, setting up our statistical environment: either R and RStudio pointed at SparkR, or Python and Jupyter Notebooks pointed at PySpark.
 
 First, create an AWS S3 bucket for your EMR scripts and logs. There are two bootstrap scripts (.sh files) for each of the two environments. You only need to change one thing for these bootstrap scripts to work. Within the file that ends with '_emrv4.sh', simple replace the phrase 'your-bucket-name-goes-here' with the name of the bucket you just created. You then need to take both bootstrap scripts (the one that you just changed that ends in "_emrv4.sh" and the one that ends in "emrv4-proc.sh") for your preferred environment and upload them to your new bucket.
 
-##
+### Setup Your CloudFormation Template
+
+The CloudFormation Script needs a few changes to work as well.
 
 
