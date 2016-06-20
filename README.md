@@ -30,10 +30,13 @@ The CloudFormation Script needs a few changes to work as well.
 	<li></li>
 	<li></li>
 	<li>Create a new S3 bucket for the logs from your clusters, and replace the phrase "logs-bucket-goes-here" with the name of your new bucket.</li>
-	<li>Go to your EMR dashboard and grab the DNS for the Master node.<img src="./cluster-dns.png">You should then be able to go to these URLs: 
-		<li>RStudio at DNS:4747</li>
-		<li>Jupyter Notebooks at DNS:8192</li>
-		<li>Ganglia Cluster Monitoring at DNS/ganglia </li>
+	<li>Go to your EMR dashboard and grab the DNS for the Master node. The whole string (seen below as 'ec2-54-89-114-32.compute-1.amazonaws.com') is your public DNS. <img src="./cluster-dns.png">
+		<br>You should then be able to go to these URLs:
+		<ul> 
+			<li>RStudio at DNS:4747</li>
+			<li>Jupyter Notebooks at DNS:8192</li>
+			<li>Ganglia Cluster Monitoring at DNS/ganglia </li>
+		</ul>
 	</li>
 
 </ul>
