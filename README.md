@@ -28,7 +28,7 @@ The CloudFormation Script needs a few changes to work as well.
 
 <ul>
 	<li></li>
-	<li>Change the CIDR IP to your organzation's or your personal computer's IP. This will only allow your organizatinor your computer to acces the ports you are opening for RStudio / Jupyter / Ganglia. This is optional, but know that if you do not do this, <style color="red">anyone can access your cluster at these ports.</style></li>
+	<li>Change the CIDR IP to your organzation's or your personal computer's IP. This will only allow your organizatinor your computer to acces the ports you are opening for RStudio / Jupyter / Ganglia. This is optional, but know that if you do not do this, <font color="red">anyone can access your cluster at these ports.</style></li>
 	<li>Create a new S3 bucket for the logs from your clusters, and replace the phrase "logs-bucket-goes-here" with the name of your new bucket.</li>
 	<li>Go to your EMR dashboard and grab the DNS for the Master node. The whole string (seen below as 'ec2-54-89-114-32.compute-1.amazonaws.com') is your public DNS. <img src="./cluster-dns.png">
 		<br>You should then be able to go to these URLs:
