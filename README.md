@@ -63,7 +63,15 @@ The CloudFormation Script needs a few changes to work as well.
 
 ## Choosing Between SparkR & PySpark
 
+If you have a strong preference of language for R or Python, you should let that preference guide your decision. Don't feel obligated to choose one over the other based on the impression that one is dramatically different than the other. 
+<ul>
 
+<li>Speed: All of the APIs (R, Python, and yes, Scala) are all communicating with the same API - specifically the Spark DataFrames API. This means that the execution speeds written in any of the three languages are functionally the same.</li>
 
+<li>Available Functionality: In terms of the Spark functionality available, there are some differences between SparkR and PySpark at present, with PySpark being more fleshed out. However, with the impending release of Spark 2.0 (DataBricks has suggested it will happen in the next few weeks), we expect many of these distinctions to disappear. </li>
 
+<li>Code Syntax: I would also say that SparkR feels a bit more like normal R than PySpark feels like Python, although both have peculiarities. This is perhaps the case since R is natively built around dataframes, like Spark’s DataFrame API. If you’re equally competent at R and Python, and don’t think you need third party packages, this might push you towards SparkR. We oriented our tutorials around the DataFrame API, and strongly recommend that social scientists work through this API (DataBricks makes the same suggestion). </li>
+
+<li>Open Source Development: It seems like Python has the advantage here, in that more of the packages extending the functionality come written in or accessible through PySpark than SparkR. This is likely a product of the current Spark community – more data scientists and engineers than more traditional statisticians and social scientists. </li>
+</ul>
 
