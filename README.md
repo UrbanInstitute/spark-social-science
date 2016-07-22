@@ -63,7 +63,7 @@ The CloudFormation Script needs a few changes to work as well.
 
 ## Choosing Between SparkR & PySpark
 
-If you have a strong preference of language for R or Python, you should let that preference guide your decision. Don't feel obligated to choose one over the other based on the impression they are dramatically different in terms of speed or available functionality:
+If you have a strong preference for either R or Python, you should let that preference guide your decision. Don't feel obligated to choose one over the other based on the impression they are dramatically different in terms of speed or available functionality:
 <ul>
 <li><b>Speed:</b> All of the language implementations (R, Python, and yes, Scala) are communicating with the same API - specifically the Spark DataFrames API. This means that the execution speeds written in any of the three languages are basically the same.</li>
 
