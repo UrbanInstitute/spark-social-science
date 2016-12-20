@@ -42,7 +42,7 @@
 			"Type" : "String",
 			"Default" : "m4.xlarge",
 			"AllowedValues" : ["m4.xlarge", "m4.2xlarge", "r3.xlarge", "r3.2xlarge", "r3.4xlarge", "r3.8xlarge"],
-			"Description" : "EMR node ec2 instance type - you can add more types by expanding on this list."
+			"Description" : "EMR node ec2 instance type"
 		},
 		"OwnerTag" : {
 			"Type" : "String",
@@ -57,7 +57,7 @@
 		},
 		"RStudioPort" : {
 			"Type" : "Number",
-			"Default" : 4747,
+			"Default" : 8787,
 			"Description" : "R-Studio Port."
 		},
 		"RStudioPassword" : {
@@ -73,12 +73,11 @@
 			"Description" : "Ganglia Port"
 		}
 	},
-
 	"Resources": {
 		"rAllowRStudio": {
 			"Type": "AWS::EC2::SecurityGroup",
 			"Properties": {
-				"GroupDescription": "Port 4747 for R-Studio server",
+				"GroupDescription": "Port 4747, 8787 for R-Studio server",
 				"VpcId": { "Ref" : "VPC" },
 				"SecurityGroupIngress": [{
 					"IpProtocol": "tcp",
@@ -93,7 +92,6 @@
 				}]
 			}
 		},
-		
 		"rSparkCluster": {
 			"Type": "AWS::EMR::Cluster",
 			"Properties": {
@@ -105,13 +103,10 @@
 				"BootstrapActions" : [{ 
 					"Name" : "Install-RStudio", 
 					"ScriptBootstrapAction" : { 
-					   "Path" : "s3://your-bucket-name-goes-here/rstudio_sparkr_emr4-proc.sh",
+					   "Path" : "s3://your-bucket-name-goes-here/rstudio_sparkr_emr5lyr.sh",
 					   "Args" : [ 
-								"--rstudio", 
-								"--sparkr", 
-								"--rexamples", 
-								"--plyrmr", 
-								"--rhdfs",
+								"--sparklyr", 
+								"--shiny",
 								"--rstudio-port", { "Ref" : "RStudioPort" }
 							]
 					} 
@@ -132,8 +127,8 @@
 				"Name": "sparkr-rstudio",
 				"JobFlowRole": "EMR_EC2_DefaultRole",
 				"ServiceRole": "EMR_DefaultRole",
-				"ReleaseLabel": "emr-5.0.0",
-				"LogUri": "s3://logs-bucket-goes-here" ,
+				"ReleaseLabel": "emr-5.2.0",
+				"LogUri": "s3://logs-bucket-goes-here",
 				"Tags": [
 					{ "Key": "Name", "Value": "sparkr-rstudio"},
 					{ "Key": "Owner",	"Value": { "Ref" : "OwnerTag" }},
