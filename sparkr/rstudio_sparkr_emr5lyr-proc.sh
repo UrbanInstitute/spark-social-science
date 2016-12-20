@@ -1,24 +1,27 @@
 #!/bin/bash
 set -x -e
 
-# AWS EMR bootstrap script 
+# AWS EMR bootstrap script - largely written by Tom Zeng of Amazon Web Services
 # for installing open-source R (www.r-project.org) with RHadoop packages and RStudio on AWS EMR
 #
 ##############################
 
-
 # Usage:
-# --rstudio - installs rstudio-server default false
-# --rexamples - adds R examples to the user home dir, default false
-# --rhdfs - installs rhdfs package, default false
-# --plyrmr - installs plyrmr package, default false
-# --updateR - installs latest R version, default true (use yum update) 
-# --latestR - installs latest R version, default false (build from source)
-# --user - sets user for rstudio, default "rstudio"
-# --user-pw - sets user-pw for user USER, default "rstudio"
-# --rstudio-port - sets rstudio port, default 80
+# --no-rstudio - don't install rstudio-server
+# --sparklyr - install RStudio's sparklyr package
 # --sparkr - install SparkR package
-# --sparkr-pkg - install deprecated SparkR-pkg package (has RDD API)
+# --shiny - install Shiny server
+#
+# --user - set user for rstudio, default "hadoop"
+# --user-pw - set user-pw for user USER, default "hadoop"
+# --rstudio-port - set rstudio port, default 8787
+#
+# --rexamples - add R examples to the user home dir, default false
+# --rhdfs - install rhdfs package, default false
+# --plyrmr - install plyrmr package, default false
+# --no-updateR - don't update latest R version
+# --latestR - install latest R version, default false (build from source - caution, may cause problem with RStudio)
+#
 
 
 # check for master node
@@ -35,7 +38,7 @@ error_msg ()
 }
 
 # get input parameters
-RSTUDIO=false
+RSTUDIO=true
 SHINY=false
 REXAMPLES=false
 USER="hadoop"
@@ -46,11 +49,17 @@ UPDATER=true
 LATEST_R=false
 RSTUDIOPORT=8787
 SPARKR=false
-SPARKR_PKG=false
+SPARKLYR=false
 while [ $# -gt 0 ]; do
 	case "$1" in
-		--rstudio)
-			RSTUDIO=true
+		--sparklyr)
+			SPARKLYR=true
+			;;
+  	--rstudio)
+      RSTUDIO=true
+  		;;
+		--no-rstudio)
+			RSTUDIO=false
 			;;
 		--shiny)
 			SHINY=true
@@ -64,8 +73,11 @@ while [ $# -gt 0 ]; do
 		--rhdfs)
 			RHDFS=true
 			;;
-		--updateR)
-			UPDATER=true
+  	--updateR)
+      UPDATER=true
+  		;;
+		--no-updateR)
+			UPDATER=false
 			;;
 		--latestR)
 			LATEST_R=true
@@ -73,9 +85,6 @@ while [ $# -gt 0 ]; do
 			;;
     --sparkr)
     	SPARKR=true
-    	;;
-    --sparkr-pkg)
-    	SPARKR_PKG=true
     	;;
     --rstudio-port)
       shift
@@ -102,6 +111,8 @@ done
 
 sudo yum install -y xorg-x11-xauth.x86_64 xorg-x11-server-utils.x86_64 xterm libXt libX11-devel libXt-devel libcurl-devel git
 
+export MAKE='make -j 8'
+
 # install latest R version from AWS Repo
 if [ "$UPDATER" = true ]; then
 sudo yum update R-core R-base R-core-devel R-devel -y
@@ -110,7 +121,7 @@ fi
 # create rstudio user on all machines
 # we need a unix user with home directory and password and hadoop permission
 if [ "$USER" != "hadoop" ]; then
-sudo adduser $USER
+  sudo adduser $USER
 fi
 sudo sh -c "echo '$USERPW' | passwd $USER --stdin"
 
@@ -125,14 +136,11 @@ if [ "$LATEST_R" = true ]; then
 	cd R-latest
 	wget http://cran.r-project.org/src/base/R-latest.tar.gz
 	tar -xzf R-latest.tar.gz
-	sudo yum install -y gcc
-	sudo yum install -y gcc-c++
-	sudo yum install -y gcc-gfortran
-	sudo yum install -y readline-devel
+	sudo yum install -y gcc gcc-c++ gcc-gfortran
+	sudo yum install -y readline-devel cairo-devel libpng-devel libjpeg-devel libtiff-devel
 	cd R-3*
-	#./configure --with-x=no --with-readline=no --enable-R-profiling=no --enable-memory-profiling=no --enable-R-shlib --with-pic --prefix=/usr --with-x --with-libpng --with-jpeglib
-  ./configure --with-recommended-packages=yes --without-x --with-cairo --with-libpng --with-libtiff --with-jpeglib --enable-R-shlib --prefix=/usr --enable-R-profiling=no --enable-memory-profiling=no
-	make
+	./configure --with-readline=yes --enable-R-profiling=no --enable-memory-profiling=no --enable-R-shlib --with-pic --prefix=/usr --without-x --with-libpng --with-jpeglib --with-cairo --enable-R-shlib --with-recommended-packages=yes
+	make -j 8
 	sudo make install
   sudo su << EOF1
 echo '
@@ -142,13 +150,15 @@ EOF1
   popd
 fi
 
+sudo sed -i 's/make/make -j 8/g' /usr/lib64/R/etc/Renviron
+
 # set unix environment variables
 sudo su << EOF1
 echo '
-export HADOOP_HOME=/usr/lib/hadoop vimlike
-export HADOOP_CMD=/usr/bin/hadoop vimlike
-export HADOOP_STREAMING=/usr/lib/hadoop-mapreduce/hadoop-streaming.jar vimlike
-export JAVA_HOME=/etc/alternatives/jre vimlike
+export HADOOP_HOME=/usr/lib/hadoop
+export HADOOP_CMD=/usr/bin/hadoop
+export HADOOP_STREAMING=/usr/lib/hadoop-mapreduce/hadoop-streaming.jar
+export JAVA_HOME=/etc/alternatives/jre
 ' >> /etc/profile
 EOF1
 sudo sh -c "source /etc/profile"
@@ -178,14 +188,7 @@ if [ "$IS_MASTER" = true -a "$RSTUDIO" = true ]; then
   # change port - 8787 will not work for many companies
   sudo sh -c "echo 'www-port=$RSTUDIOPORT' >> /etc/rstudio/rserver.conf"
   sudo perl -p -i -e "s/= 5../= 100/g" /etc/pam.d/rstudio
-  sudo rstudio-server restart
-fi
-
-if [ "$IS_MASTER" = true -a "$SHINY" = true ]; then
-  # install Shiny server
-  wget https://download3.rstudio.org/centos5.9/x86_64/shiny-server-1.4.1.759-rh5-x86_64.rpm
-  sudo yum install --nogpgcheck -y shiny-server-1.4.1.759-rh5-x86_64.rpm
-  sudo shiny-server restart
+  #sudo rstudio-server restart
 fi
 
 
@@ -205,7 +208,7 @@ fi
 # install required packages
 sudo R --no-save << EOF
 install.packages(c('RJSONIO', 'itertools', 'digest', 'Rcpp', 'functional', 'httr', 'plyr', 'stringr', 'reshape2', 'caTools', 'rJava', 'devtools'),
-repos="http://cran.rstudio.com", INSTALL_opts=c('--byte-compile') )
+repos="http://cran.rstudio.com")
 # here you can add your required packages which should be installed on ALL nodes
 # install.packages(c(''), repos="http://cran.rstudio.com", INSTALL_opts=c('--byte-compile') )
 EOF
@@ -233,76 +236,13 @@ if [ "$PLYRMR" = true ]; then
 	# This takes a lot of time. Please remove if not required.
 	sudo R --no-save << EOF
   install.packages(c('dplyr', 'R.methodsS3', 'Hmisc', 'memoise', 'rjson'),
-  repos="http://cran.rstudio.com", INSTALL_opts=c('--byte-compile') )
+  repos="http://cran.rstudio.com" )
 EOF
 	curl --insecure -L https://github.com/RevolutionAnalytics/plyrmr/releases/download/0.6.0/plyrmr_0.6.0.tar.gz | tar zx
 	sudo R CMD INSTALL --byte-compile plyrmr 
 fi
 
-
-# install SparkR or the out-dated SparkR-pkg
-if [ "$SPARKR" = true ] || [ "$SPARKR_PKG" = true ]; then 
-  #the following are needed only if not login in as hadoop
-  sudo mkdir /mnt/spark
-  sudo chmod a+rwx /mnt/spark
-  if [ -d /mnt1 ]; then
-    sudo mkdir /mnt1/spark
-    sudo chmod a+rwx /mnt1/spark
-  fi
-  
-  if [ "$SPARKR" = true ]; then
-    #wait file to show up
-    while [ ! -d /usr/lib/spark/R/lib/SparkR ]
-    do
-      sleep 10
-    done
-    sleep 15
-  	sudo R --no-save << EOF
-library(devtools)
-install('/usr/lib/spark/R/lib/SparkR')
-# here you can add your required packages which should be installed on ALL nodes
-# install.packages(c(''), repos="http://cran.rstudio.com", INSTALL_opts=c('--byte-compile') )
-EOF
-  else
-    pushd . 
-    git clone https://github.com/amplab-extras/SparkR-pkg.git
-    cd SparkR-pkg
-    git checkout sparkr-sql # Spark 1.4 support is in this branch
-    
-    sudo su << EOF
-echo '
-export PATH=${PWD}:$PATH
-' >> /etc/profile
-EOF
-    #wait file to show up
-    while [ ! -f /usr/lib/hadoop-lzo/lib/hadoop-lzo.jar -o ! -d /usr/lib/hadoop/client ]
-    do
-      sleep 10
-    done
-    sleep 15
-    # copy the emr dependencies to the SBT unmanaged jars directory
-    mkdir pkg/src/lib
-    cp /usr/lib/hadoop-lzo/lib/hadoop-lzo.jar pkg/src/lib
-    cp /usr/lib/hadoop/client/hadoop-mapreduce-client-core-2.6.0-amzn-*.jar pkg/src/lib
-    wget http://central.maven.org/maven2/com/typesafe/sbt/sbt-launcher/0.13.6/sbt-launcher-0.13.6.jar
-    # fix the corrupted sbt-launch-0.13.6.jar in the github repo
-    cp sbt-launcher-0.13.6.jar pkg/src/sbt/sbt-launch-0.13.6.jar
-    # build againt Spark 1.4 and YARN/Hadoop 2.6
-    USE_YARN=1 SPARK_VERSION=1.4.0 SPARK_YARN_VERSION=2.6.0 SPARK_HADOOP_VERSION=2.6.0 ./install-dev.sh
-  	sudo R --no-save << EOF
-    install.packages('testthat',repos="http://cran.rstudio.com") 
-  	library(devtools)
-  	install('${PWD}/pkg/R/SparkR')
-  	# here you can add your required packages which should be installed on ALL nodes
-  	# install.packages(c(''), repos="http://cran.rstudio.com", INSTALL_opts=c('--byte-compile') )
-  	install.packages('randomForest',repos="http://cran.rstudio.com")
-  	install.packages('caret',repos="http://cran.rstudio.com")
-  	install.packages('pROC',repos="http://cran.rstudio.com")
-EOF
-    popd
-  fi
-
-
+if [ "$SPARKR" = true ] || [ "$SPARKLYR" = true ]; then 
 cat << 'EOF' > /tmp/Renvextra
 JAVA_HOME="/etc/alternatives/jre"
 HADOOP_HOME_WARN_SUPPRESS="true"
@@ -335,5 +275,62 @@ PATH=${PWD}:${PATH}
 EOF
 cat /tmp/Renvextra | sudo  tee -a /usr/lib64/R/etc/Renviron
 
+# wait SparkR file to show up
+while [ ! -d /usr/lib/spark/R/lib/SparkR ]
+do
+  sleep 5
+done
+sleep 5
 fi
 
+# install SparkR
+if [ "$SPARKR" = true ]; then 
+  #the following are needed only if not login in as hadoop
+  sudo mkdir /mnt/spark
+  sudo chmod a+rwx /mnt/spark
+  if [ -d /mnt1 ]; then
+    sudo mkdir /mnt1/spark
+    sudo chmod a+rwx /mnt1/spark
+  fi
+  
+  sudo R --no-save << EOF
+    library(devtools)
+    install('/usr/lib/spark/R/lib/SparkR')
+    # here you can add your required packages which should be installed on ALL nodes
+    # install.packages(c(''), repos="http://cran.rstudio.com", INSTALL_opts=c('--byte-compile') )
+    EOF
+
+fi
+
+if [ "$SPARKLYR" = true ]; then
+	sudo R --no-save << EOF
+  install.packages(c('sparklyr', 'dplyr', 'nycflights13', 'Lahman', 'R.methodsS3', 'Hmisc', 'memoise', 'rjson', 'data.table', 'ggplot2', 'DBI'),
+  repos="http://cran.rstudio.com" )
+EOF
+fi
+
+
+if [ "$IS_MASTER" = true -a "$SHINY" = true ]; then
+  # install Shiny server
+  wget https://download3.rstudio.org/centos5.9/x86_64/shiny-server-1.4.1.759-rh5-x86_64.rpm
+  sudo yum install --nogpgcheck -y shiny-server-1.4.1.759-rh5-x86_64.rpm
+  
+sudo R --no-save << EOF
+install.packages(c('shiny'),
+repos="http://cran.rstudio.com")
+EOF
+
+fi
+
+if [ "$USER" != "hadoop" ]; then
+  while [ ! -f /usr/bin/hdfs ]
+  do
+    sleep 5
+  done
+  sudo -u hdfs hadoop fs -mkdir /user/$USER
+  sudo -u hdfs hadoop fs -chown root /user/$USER
+  sudo -u hdfs hdfs dfs -chmod -R 777 /user/$USER
+fi
+
+sudo rstudio-server restart
+echo "rstudio server and packages installation completed"
