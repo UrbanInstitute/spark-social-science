@@ -33,7 +33,7 @@ The CloudFormation Script needs a few changes to work as well.
 <ul>
 	<li>Replace the phrase 'your-bucket-name-goes-here' with the name of the bucket you created a minute ago for your bootstrap scripts.</li>
 	<li>Create a new S3 bucket for the logs from your clusters, and replace the phrase "logs-bucket-goes-here" with the name of your new bucket.</li>
-	<li>Change the CIDR IP to your organzation's or your personal computer's IP. This will only allow your organizatinor your computer to acces the ports you are opening for RStudio / Jupyter / Ganglia. This is optional, but know that if you do not do this, <font3 color="red">anyone can access your cluster at these ports.</style></li>
+	<li>Change the CIDR IP to your organzation's or your personal computer's IP. This will only allow your organization or your computer to access the ports you are opening for RStudio / Jupyter / Ganglia. This is optional, but know that if you do not do this, <font3 color="red">anyone can access your cluster at these ports.</style></li>
 </ul>
 
 
@@ -42,7 +42,7 @@ The CloudFormation Script needs a few changes to work as well.
 <ul>
 	<li>Go to CloudFormation on the AWS Dashboard - Hit Create Stack</li> 
 	<li>Upload your CloudFormation Script - Hit Next</li>
-	<li>On the 'Specify Details' page, you need to make a few changes, though once you have these fiugred out you can add them to the CloudFormation script.</li>
+	<li>On the 'Specify Details' page, you need to make a few changes, though once you have these figured out you can add them to the CloudFormation script.</li>
 	<ul>
 		<li>Create a Stack Name</li>
 		<li>Set a Key Pair setup for your account (can set as a default within CloudFormation);</li>
