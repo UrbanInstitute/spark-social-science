@@ -131,6 +131,7 @@ if [ ! "$PYTHON_PACKAGES" = "" ]; then
 fi
 
 
+if [ "$IS_MASTER" = true ]; then
 
 ## Configure Jupyter Options:
 mkdir -p ~/.jupyter
@@ -150,7 +151,7 @@ echo "c.NotebookApp.MultiKernelManager.default_kernel_name = 'pyspark'" >> ~/.ju
 
 if [ ! "$JUPYTER_PASSWORD" = "" ]; then
   sed -i '/c.NotebookApp.password/d' ~/.jupyter/jupyter_notebook_config.py
-  HASHED_PASSWORD=$(python3 -c "from notebook.auth import passwd; print(passwd('$JUPYTER_PASSWORD'))")
+  HASHED_PASSWORD=$(python -c "from notebook.auth import passwd; print(passwd('$JUPYTER_PASSWORD'))")
   echo "c.NotebookApp.password = u'$HASHED_PASSWORD'" >> ~/.jupyter/jupyter_notebook_config.py
 else
   sed -i '/c.NotebookApp.token/d' ~/.jupyter/jupyter_notebook_config.py
@@ -181,26 +182,26 @@ if [ ! "$NOTEBOOK_DIR" = "" ]; then
   if [[ "$NOTEBOOK_DIR" == s3://* ]]; then
     NOTEBOOK_DIR_S3=true
 
-	BUCKET=$(ruby -e "nb_dir='$NOTEBOOK_DIR';puts nb_dir.split('//')[1].split('/')[0]")
-	FOLDER=$(ruby -e "nb_dir='$NOTEBOOK_DIR';puts nb_dir.split('//')[1].split('/')[1..-1].join('/')")
-	if [ "$USE_CACHED_DEPS" != true ]; then
-	  sudo yum install -y automake fuse fuse-devel libxml2-devel
-	fi
-	cd /mnt
-	git clone https://github.com/s3fs-fuse/s3fs-fuse.git
-	cd s3fs-fuse/
-	ls -alrt
-	./autogen.sh
-	./configure
-	make
-	sudo make install
-	sudo su -c 'echo user_allow_other >> /etc/fuse.conf'
-	mkdir -p /mnt/s3fs-cache
-	mkdir -p /mnt/$BUCKET
+  BUCKET=$(ruby -e "nb_dir='$NOTEBOOK_DIR';puts nb_dir.split('//')[1].split('/')[0]")
+  FOLDER=$(ruby -e "nb_dir='$NOTEBOOK_DIR';puts nb_dir.split('//')[1].split('/')[1..-1].join('/')")
+  if [ "$USE_CACHED_DEPS" != true ]; then
+    sudo yum install -y automake fuse fuse-devel libxml2-devel
+  fi
+  cd /mnt
+  git clone https://github.com/s3fs-fuse/s3fs-fuse.git
+  cd s3fs-fuse/
+  ls -alrt
+  ./autogen.sh
+  ./configure
+  make
+  sudo make install
+  sudo su -c 'echo user_allow_other >> /etc/fuse.conf'
+  mkdir -p /mnt/s3fs-cache
+  mkdir -p /mnt/$BUCKET
 
-	/usr/local/bin/s3fs -o allow_other -o iam_role=auto -o umask=0 -o url=https://s3.amazonaws.com  -o no_check_certificate -o enable_noobj_cache -o use_cache=/mnt/s3fs-cache $BUCKET /mnt/$BUCKET
-	echo "c.NotebookApp.notebook_dir = '/mnt/$BUCKET/$FOLDER'" >> ~/.jupyter/jupyter_notebook_config.py
-	echo "c.ContentsManager.checkpoints_kwargs = {'root_dir': '.checkpoints'}" >> ~/.jupyter/jupyter_notebook_config.py
+  /usr/local/bin/s3fs -o allow_other -o iam_role=auto -o umask=0 -o url=https://s3.amazonaws.com  -o no_check_certificate -o enable_noobj_cache -o use_cache=/mnt/s3fs-cache $BUCKET /mnt/$BUCKET
+  echo "c.NotebookApp.notebook_dir = '/mnt/$BUCKET/$FOLDER'" >> ~/.jupyter/jupyter_notebook_config.py
+  echo "c.ContentsManager.checkpoints_kwargs = {'root_dir': '.checkpoints'}" >> ~/.jupyter/jupyter_notebook_config.py
   else
     echo "c.NotebookApp.notebook_dir = '$NOTEBOOK_DIR'" >> ~/.jupyter/jupyter_notebook_config.py
     echo "c.ContentsManager.checkpoints_kwargs = {'root_dir': '.checkpoints'}" >> ~/.jupyter/jupyter_notebook_config.py
@@ -215,26 +216,9 @@ git clone https://github.com/apache/incubator-toree.git
 cd incubator-toree/
 
 make -j8 dist
+make release || true 
 
-
-sudo python -m pip install /mnt/incubator-toree/dist/toree-pip
-export SPARK_HOME="/usr/lib/spark/"
-
-SPARK_PACKAGES="com.databricks:spark-csv_2.11:1.5.0"
-
-
-if [ "$USER_SPARK_OPTS" = "" ]; then
-	SPARK_OPTS="--packages $SPARK_PACKAGES"
-else
-	SPARK_OPTS=$USER_SPARK_OPTS
-	SPARK_PACKAGES=$(ruby -e "opts='$SPARK_OPTS'.split;pkgs=nil;opts.each_with_index{|o,i| pkgs=opts[i+1] if o.start_with?('--packages')};puts pkgs || '$SPARK_PACKAGES'")
-fi
-
-export SPARK_OPTS
-export SPARK_PACKAGES
-
-sudo jupyter toree install --interpreters=$INTERPRETERS --spark_home=$SPARK_HOME --spark_opts="$SPARK_OPTS"
-
+background_install_proc() {
 while [ ! -f /etc/spark/conf/spark-defaults.conf ]
 do
   sleep 10
@@ -243,6 +227,25 @@ echo "Found /etc/spark/conf/spark-defaults.conf"
 if ! grep "spark.jars.packages" /etc/spark/conf/spark-defaults.conf; then
   sudo bash -c "echo 'spark.jars.packages              $SPARK_PACKAGES' >> /etc/spark/conf/spark-defaults.conf"
 fi
+
+sudo python -m pip install /mnt/incubator-toree/dist/toree-pip
+export SPARK_HOME="/usr/lib/spark/"
+
+SPARK_PACKAGES="com.databricks:spark-csv_2.11:1.5.0"
+
+
+if [ "$USER_SPARK_OPTS" = "" ]; then
+  SPARK_OPTS="--packages $SPARK_PACKAGES"
+else
+  SPARK_OPTS=$USER_SPARK_OPTS
+  SPARK_PACKAGES=$(ruby -e "opts='$SPARK_OPTS'.split;pkgs=nil;opts.each_with_index{|o,i| pkgs=opts[i+1] if o.start_with?('--packages')};puts pkgs || '$SPARK_PACKAGES'")
+fi
+
+export SPARK_OPTS
+export SPARK_PACKAGES
+
+sudo jupyter toree install --interpreters=$INTERPRETERS --spark_home=$SPARK_HOME --spark_opts="$SPARK_OPTS"
+
 
 echo "Starting Jupyter notebook via pyspark"
 cd ~
@@ -268,8 +271,10 @@ BASH_SCRIPT
   ',
 }
 PUPPET_SCRIPT
+}
 
-
-
-
+echo "Running background process to install Apacke Toree"
 background_install_proc &
+fi
+echo "Bootstrap action foreground process finished"
+
