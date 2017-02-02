@@ -51,7 +51,7 @@
 		},
 		"JupyterPort" : {
 			"Type" : "Number",
-			"Default" : 8192,
+			"Default" : 8194,
 			"Description" : "Jupyter Port"
 		},
 		"GangliaPort" : {
@@ -110,7 +110,7 @@
 				"Name": "pyspark-jupyter",
 				"JobFlowRole": "EMR_EC2_DefaultRole",
 				"ServiceRole": "EMR_DefaultRole",
-				"ReleaseLabel": "emr-5.0.0",
+				"ReleaseLabel": "emr-5.2.0",
 				"LogUri": "s3://logs-bucket-goes-here",
 				"Tags": [
 					{ "Key": "Name", "Value": "pyspark-jupyter"},
