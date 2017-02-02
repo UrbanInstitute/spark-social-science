@@ -1,27 +1,36 @@
 #!/bin/bash
 set -x -e
 
-# AWS EMR bootstrap script - largely written by Tom Zeng of Amazon Web Services
+# AWS EMR bootstrap script 
 # for installing open-source R (www.r-project.org) with RHadoop packages and RStudio on AWS EMR
 #
+# tested with AMI 4.0.0 (hadoop 2.6.0)
+#
+# schmidbe@amazon.de
+# 24. September 2014
+# 2015-07-14 - Tom Zeng tomzeng@amazon.com, modified on top of Christopher Bozeman's "--sparkr" change to add "--sparkr-pkg"
+# 2015-07-29 - Tom Zeng tomzeng@amazon.com, converted to AMI 4.0.0 compatible
+# 2016-01-15 - Tom Zeng tomzeng@amazon.com, converted to AMI 4.2.0 compatible and added shiny
+# 2016-10-07 - Tom Zeng tomzeng@amazon.com, added Sparklyr and improved install speed by 2-3x
 ##############################
+
 
 # Usage:
 # --no-rstudio - don't install rstudio-server
 # --sparklyr - install RStudio's sparklyr package
 # --sparkr - install SparkR package
 # --shiny - install Shiny server
+# --no-tutorials - does not copy in Urban Institute SparkR Tutorials from GitHub
 #
 # --user - set user for rstudio, default "hadoop"
 # --user-pw - set user-pw for user USER, default "hadoop"
 # --rstudio-port - set rstudio port, default 8787
 #
-# --rexamples - add R examples to the user home dir, default false
 # --rhdfs - install rhdfs package, default false
 # --plyrmr - install plyrmr package, default false
 # --no-updateR - don't update latest R version
-# --latestR - install latest R version, default false (build from source - caution, may cause problem with RStudio)
 #
+# --sparkr-pkg - install deprecated SparkR-pkg package (obsolete, has RDD API)
 
 
 # check for master node
@@ -40,33 +49,30 @@ error_msg ()
 # get input parameters
 RSTUDIO=true
 SHINY=false
-REXAMPLES=false
+SPARKR_TUTORIALS=true
 USER="hadoop"
 USERPW="hadoop"
 PLYRMR=false
 RHDFS=false
 UPDATER=true
-LATEST_R=false
 RSTUDIOPORT=8787
 SPARKR=false
-SPARKLYR=false
+SPARKR_PKG=false
+SPARKLYR=true
 while [ $# -gt 0 ]; do
 	case "$1" in
-		--sparklyr)
-			SPARKLYR=true
+		--no-sparklyr)
+			SPARKLYR=false
 			;;
-  	--rstudio)
-      RSTUDIO=true
-  		;;
 		--no-rstudio)
 			RSTUDIO=false
 			;;
 		--shiny)
 			SHINY=true
 			;;
-		--rexamples)
-			REXAMPLES=true
-			;;
+    --no-tutorials)
+      SPARKR_TUTORIALS=false
+      ;;
 		--plyrmr)
 			PLYRMR=true
 			;;
@@ -79,12 +85,11 @@ while [ $# -gt 0 ]; do
 		--no-updateR)
 			UPDATER=false
 			;;
-		--latestR)
-			LATEST_R=true
-			UPDATER=false
-			;;
     --sparkr)
     	SPARKR=true
+    	;;
+    --sparkr-pkg)
+    	SPARKR_PKG=true
     	;;
     --rstudio-port)
       shift
@@ -129,27 +134,6 @@ mkdir /mnt/r-stuff
 cd /mnt/r-stuff
 
 
-# update to latest R version
-if [ "$LATEST_R" = true ]; then
-  pushd .
-	mkdir R-latest
-	cd R-latest
-	wget http://cran.r-project.org/src/base/R-latest.tar.gz
-	tar -xzf R-latest.tar.gz
-	sudo yum install -y gcc gcc-c++ gcc-gfortran
-	sudo yum install -y readline-devel cairo-devel libpng-devel libjpeg-devel libtiff-devel
-	cd R-3*
-	./configure --with-readline=yes --enable-R-profiling=no --enable-memory-profiling=no --enable-R-shlib --with-pic --prefix=/usr --without-x --with-libpng --with-jpeglib --with-cairo --enable-R-shlib --with-recommended-packages=yes
-	make -j 8
-	sudo make install
-  sudo su << EOF1
-echo '
-export PATH=${PWD}/bin:$PATH
-' >> /etc/profile
-EOF1
-  popd
-fi
-
 sudo sed -i 's/make/make -j 8/g' /usr/lib64/R/etc/Renviron
 
 # set unix environment variables
@@ -191,16 +175,10 @@ if [ "$IS_MASTER" = true -a "$RSTUDIO" = true ]; then
   #sudo rstudio-server restart
 fi
 
-
-# add examples to user
-# only run if master node
-if [ "$IS_MASTER" = true -a "$REXAMPLES" = true ]; then
-  # and copy R example scripts to user's home dir amd set permission
-  wget --no-check-certificate https://raw.githubusercontent.com/tomz/emr-bootstrap-actions/master/R/Hadoop/examples/rmr2_example.R
-  wget --no-check-certificate https://raw.githubusercontent.com/tomz/emr-bootstrap-actions/master/R/Hadoop/examples/biganalyses_example.R
-  wget --no-check-certificate https://raw.githubusercontent.com/tomz/emr-bootstrap-actions/master/R/Hadoop/examples/change_pw.R
-  #sudo cp -p *.R /home/$USER/.
-  sudo mv *.R /home/$USER/.
+if [ "$IS_MASTER" = true -a "$SPARKR_TUTORIALS" = true ]; then
+  git clone https://github.com/UrbanInstitute/sparkr-tutorials.git
+  cd sparkr-tutorials
+  sudo mv * /home/$USER/.
   sudo chown $USER:$USER -Rf /home/$USER
 fi
 
@@ -242,7 +220,7 @@ EOF
 	sudo R CMD INSTALL --byte-compile plyrmr 
 fi
 
-if [ "$SPARKR" = true ] || [ "$SPARKLYR" = true ]; then 
+if [ "$SPARKR" = true ] || [ "$SPARKLYR" = true ] || [ "$SPARKR_PKG" = true ]; then 
 cat << 'EOF' > /tmp/Renvextra
 JAVA_HOME="/etc/alternatives/jre"
 HADOOP_HOME_WARN_SUPPRESS="true"
@@ -283,8 +261,8 @@ done
 sleep 5
 fi
 
-# install SparkR
-if [ "$SPARKR" = true ]; then 
+# install SparkR or the out-dated SparkR-pkg
+if [ "$SPARKR" = true ] || [ "$SPARKR_PKG" = true ]; then 
   #the following are needed only if not login in as hadoop
   sudo mkdir /mnt/spark
   sudo chmod a+rwx /mnt/spark
@@ -293,13 +271,51 @@ if [ "$SPARKR" = true ]; then
     sudo chmod a+rwx /mnt1/spark
   fi
   
-  sudo R --no-save << EOF
-    library(devtools)
-    install('/usr/lib/spark/R/lib/SparkR')
-    # here you can add your required packages which should be installed on ALL nodes
-    # install.packages(c(''), repos="http://cran.rstudio.com", INSTALL_opts=c('--byte-compile') )
-    EOF
-
+  if [ "$SPARKR" = true ]; then
+  	sudo R --no-save << EOF
+library(devtools)
+install('/usr/lib/spark/R/lib/SparkR')
+# here you can add your required packages which should be installed on ALL nodes
+# install.packages(c(''), repos="http://cran.rstudio.com", INSTALL_opts=c('--byte-compile') )
+EOF
+  else
+    pushd . 
+    git clone https://github.com/amplab-extras/SparkR-pkg.git
+    cd SparkR-pkg
+    git checkout sparkr-sql # Spark 1.4 support is in this branch
+    
+    sudo su << EOF
+echo '
+export PATH=${PWD}:$PATH
+' >> /etc/profile
+EOF
+    #wait file to show up
+    while [ ! -f /usr/lib/hadoop-lzo/lib/hadoop-lzo.jar -o ! -d /usr/lib/hadoop/client ]
+    do
+      sleep 5
+    done
+    sleep 5
+    # copy the emr dependencies to the SBT unmanaged jars directory
+    mkdir pkg/src/lib
+    cp /usr/lib/hadoop-lzo/lib/hadoop-lzo.jar pkg/src/lib
+    cp /usr/lib/hadoop/client/hadoop-mapreduce-client-core-2.6.0-amzn-*.jar pkg/src/lib
+    wget http://central.maven.org/maven2/com/typesafe/sbt/sbt-launcher/0.13.6/sbt-launcher-0.13.6.jar
+    # fix the corrupted sbt-launch-0.13.6.jar in the github repo
+    cp sbt-launcher-0.13.6.jar pkg/src/sbt/sbt-launch-0.13.6.jar
+    # build againt Spark 1.4 and YARN/Hadoop 2.6
+    USE_YARN=1 SPARK_VERSION=1.4.0 SPARK_YARN_VERSION=2.6.0 SPARK_HADOOP_VERSION=2.6.0 ./install-dev.sh
+  	sudo R --no-save << EOF
+    install.packages('testthat',repos="http://cran.rstudio.com") 
+  	library(devtools)
+  	install('${PWD}/pkg/R/SparkR')
+  	# here you can add your required packages which should be installed on ALL nodes
+  	# install.packages(c(''), repos="http://cran.rstudio.com", INSTALL_opts=c('--byte-compile') )
+  	install.packages('randomForest',repos="http://cran.rstudio.com")
+  	install.packages('caret',repos="http://cran.rstudio.com")
+  	install.packages('pROC',repos="http://cran.rstudio.com")
+EOF
+    popd
+  fi
 fi
 
 if [ "$SPARKLYR" = true ]; then
