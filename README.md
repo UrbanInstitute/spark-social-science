@@ -55,7 +55,7 @@ The CloudFormation Script needs a few changes to work as well.
 		<br>You should then be able to go to these URLs:
 		<ul> 
 			<li>RStudio at DNS:4747 - note that RStudio by default needs a username and password. These are set to 'hadoop' for both, and does affect how you are logged into the master node. We have run into errors changing this username and would be happy to hear about an alternative / fix.</li>
-			<li>Jupyter Notebooks at DNS:8192</li>
+			<li>Jupyter Notebooks at DNS:8194</li>
 			<li>Ganglia Cluster Monitoring at DNS/ganglia </li>
 		</ul>
 	</li>
