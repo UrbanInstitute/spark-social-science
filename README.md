@@ -7,6 +7,7 @@ The goal of this project is to deliver powerful and elastic Spark clusters to re
 This guide illustrates the (relatively) straight forward process to provide clusters for your analysts and researchers. For more information about using Spark via the R and Python APIs, see these repositories:
 
 <ul>
+	<li>https://github.com/UrbanInstitute/spark-social-science-manual</li>
 	<li>https://github.com/UrbanInstitute/sparkr-tutorials</li>
 	<li>https://github.com/UrbanInstitute/pyspark-tutorials</li>
 </ul>
