@@ -64,7 +64,7 @@
 		"rAllowJupyter": {
 			"Type": "AWS::EC2::SecurityGroup",
 			"Properties": {
-				"GroupDescription": "Port 8192 for Jupyter server",
+				"GroupDescription": "Port 8194 for Jupyter server",
 				"VpcId": { "Ref" : "VPC" },
 				"SecurityGroupIngress": [{
 					"IpProtocol": "tcp",
