@@ -2,16 +2,10 @@
 set -x -e
 
 # AWS EMR bootstrap script 
-# for installing open-source R (www.r-project.org) with RHadoop packages and RStudio on AWS EMR
+# for installing SparkR & RStudio on on AWS EMR 5.3 with Spark 2.1.0 
 #
-# tested with AMI 4.0.0 (hadoop 2.6.0)
-#
-# schmidbe@amazon.de
-# 24. September 2014
-# 2015-07-14 - Tom Zeng tomzeng@amazon.com, modified on top of Christopher Bozeman's "--sparkr" change to add "--sparkr-pkg"
-# 2015-07-29 - Tom Zeng tomzeng@amazon.com, converted to AMI 4.0.0 compatible
-# 2016-01-15 - Tom Zeng tomzeng@amazon.com, converted to AMI 4.2.0 compatible and added shiny
-# 2016-10-07 - Tom Zeng tomzeng@amazon.com, added Sparklyr and improved install speed by 2-3x
+# Adapted heavily from AWS Engineer Tom Zeng
+# 
 ##############################
 
 
@@ -29,8 +23,6 @@ set -x -e
 # --rhdfs - install rhdfs package, default false
 # --plyrmr - install plyrmr package, default false
 # --no-updateR - don't update latest R version
-#
-# --sparkr-pkg - install deprecated SparkR-pkg package (obsolete, has RDD API)
 
 
 # check for master node
@@ -87,9 +79,6 @@ while [ $# -gt 0 ]; do
 			;;
     --sparkr)
     	SPARKR=true
-    	;;
-    --sparkr-pkg)
-    	SPARKR_PKG=true
     	;;
     --rstudio-port)
       shift
@@ -261,66 +250,28 @@ done
 sleep 5
 fi
 
-# install SparkR or the out-dated SparkR-pkg
-if [ "$SPARKR" = true ] || [ "$SPARKR_PKG" = true ]; then 
+# install SparkR
+if [ "$SPARKR" = true ]; then 
   #the following are needed only if not login in as hadoop
   sudo mkdir /mnt/spark
   sudo chmod a+rwx /mnt/spark
+
   if [ -d /mnt1 ]; then
     sudo mkdir /mnt1/spark
     sudo chmod a+rwx /mnt1/spark
   fi
   
-  if [ "$SPARKR" = true ]; then
   	sudo R --no-save << EOF
 library(devtools)
 install('/usr/lib/spark/R/lib/SparkR')
 # here you can add your required packages which should be installed on ALL nodes
 # install.packages(c(''), repos="http://cran.rstudio.com", INSTALL_opts=c('--byte-compile') )
 EOF
-  else
-    pushd . 
-    git clone https://github.com/amplab-extras/SparkR-pkg.git
-    cd SparkR-pkg
-    git checkout sparkr-sql # Spark 1.4 support is in this branch
-    
-    sudo su << EOF
-echo '
-export PATH=${PWD}:$PATH
-' >> /etc/profile
-EOF
-    #wait file to show up
-    while [ ! -f /usr/lib/hadoop-lzo/lib/hadoop-lzo.jar -o ! -d /usr/lib/hadoop/client ]
-    do
-      sleep 5
-    done
-    sleep 5
-    # copy the emr dependencies to the SBT unmanaged jars directory
-    mkdir pkg/src/lib
-    cp /usr/lib/hadoop-lzo/lib/hadoop-lzo.jar pkg/src/lib
-    cp /usr/lib/hadoop/client/hadoop-mapreduce-client-core-2.6.0-amzn-*.jar pkg/src/lib
-    wget http://central.maven.org/maven2/com/typesafe/sbt/sbt-launcher/0.13.6/sbt-launcher-0.13.6.jar
-    # fix the corrupted sbt-launch-0.13.6.jar in the github repo
-    cp sbt-launcher-0.13.6.jar pkg/src/sbt/sbt-launch-0.13.6.jar
-    # build againt Spark 1.4 and YARN/Hadoop 2.6
-    USE_YARN=1 SPARK_VERSION=1.4.0 SPARK_YARN_VERSION=2.6.0 SPARK_HADOOP_VERSION=2.6.0 ./install-dev.sh
-  	sudo R --no-save << EOF
-    install.packages('testthat',repos="http://cran.rstudio.com") 
-  	library(devtools)
-  	install('${PWD}/pkg/R/SparkR')
-  	# here you can add your required packages which should be installed on ALL nodes
-  	# install.packages(c(''), repos="http://cran.rstudio.com", INSTALL_opts=c('--byte-compile') )
-  	install.packages('randomForest',repos="http://cran.rstudio.com")
-  	install.packages('caret',repos="http://cran.rstudio.com")
-  	install.packages('pROC',repos="http://cran.rstudio.com")
-EOF
-    popd
-  fi
 fi
 
 if [ "$SPARKLYR" = true ]; then
 	sudo R --no-save << EOF
-  install.packages(c('sparklyr', 'dplyr', 'nycflights13', 'Lahman', 'R.methodsS3', 'Hmisc', 'memoise', 'rjson', 'data.table', 'ggplot2', 'DBI'),
+  install.packages(c('sparklyr', 'dplyr', 'Lahman', 'R.methodsS3', 'Hmisc', 'memoise', 'rjson', 'data.table', 'ggplot2', 'DBI'),
   repos="http://cran.rstudio.com" )
 EOF
 fi

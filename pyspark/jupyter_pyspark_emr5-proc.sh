@@ -2,15 +2,16 @@
 set -x -e
 
 # AWS EMR bootstrap script 
-# for installing Python and Jupyter Notebooks on AWS EMR 5.2 with Spark 2.0 
-##
-# Adapted from work done by Tom Zeng of Amazon Web Services
+# for installing Python and Jupyter Notebooks on AWS EMR 5.3 with Spark 2.1.0 
+#
+# Adapted heavily from AWS Engineer Tom Zeng
 #
 ##############################
 
+# Usage:
 # --port - set the port for Jupyter notebook, default is 8192
 # --password - set the password for Jupyter notebook
-# --notebook-dir - specify notebook folder, this could be a local directory or a S3 bucket
+# --no-tutorials - stops git clone of Urban Institute PySpark tutorials
 # --ssl - enable ssl, make sure to use your own cert and key files to get rid of the warning
 # --copy-samples - copy sample notebooks to samples sub folder under the notebook folder
 
@@ -28,15 +29,12 @@ error_msg ()
   echo 1>&2 "Error: $1"
 }
 
-# some defaults
+# Default parameters:
 PYTHON_PACKAGES=""
 DS_PACKAGES=true
-
 JUPYTER_PORT=8194
 JUPYTER_PASSWORD=""
-
-NOTEBOOK_DIR="s3://ui-spark-social-science/pyspark-tutorials/notebooks"
-
+PYSPARK_TUTORIALS=true
 INTERPRETERS="SQL,PySpark"
 USER_SPARK_OPTS=""
 
@@ -59,9 +57,8 @@ while [ $# -gt 0 ]; do
       shift
       JUPYTER_PASSWORD=$1
       ;;
-    --notebook-dir)
-      shift
-      NOTEBOOK_DIR=$1
+    --no-tutorials )
+      PYSPARK_TUTORIALS=false
       ;;
     --toree-interpreters)
       shift
@@ -170,43 +167,18 @@ sudo jupyter contrib nbextension install --system
 sudo python -m pip install -U jupyter_nbextensions_configurator
 sudo jupyter nbextensions_configurator enable --system
 sudo python -m pip install -U ipywidgets
-sudo jupyter nbextension enable --py --sys-prefix widgetsnbextension
+sudo jupyter nbextension enable --py --sys-prepwdfix widgetsnbextension
 sudo python -m pip install -U gvmagic py_d3
 sudo python -m pip install -U ipython-sql rpy2
 
 
+if [[ $PYSPARK_TUTORIALS = true ]]; then
+  git clone https://github.com/UrbanInstitute/pyspark-tutorials.git
 
-if [ ! "$NOTEBOOK_DIR" = "" ]; then
-  NOTEBOOK_DIR="${NOTEBOOK_DIR%/}/" # remove trailing / if exists then add /
-
-  if [[ "$NOTEBOOK_DIR" == s3://* ]]; then
-    NOTEBOOK_DIR_S3=true
-
-  BUCKET=$(ruby -e "nb_dir='$NOTEBOOK_DIR';puts nb_dir.split('//')[1].split('/')[0]")
-  FOLDER=$(ruby -e "nb_dir='$NOTEBOOK_DIR';puts nb_dir.split('//')[1].split('/')[1..-1].join('/')")
-  if [ "$USE_CACHED_DEPS" != true ]; then
-    sudo yum install -y automake fuse fuse-devel libxml2-devel
-  fi
-  cd /mnt
-  git clone https://github.com/s3fs-fuse/s3fs-fuse.git
-  cd s3fs-fuse/
-  ls -alrt
-  ./autogen.sh
-  ./configure
-  make
-  sudo make install
-  sudo su -c 'echo user_allow_other >> /etc/fuse.conf'
-  mkdir -p /mnt/s3fs-cache
-  mkdir -p /mnt/$BUCKET
-
-  /usr/local/bin/s3fs -o allow_other -o iam_role=auto -o umask=0 -o url=https://s3.amazonaws.com  -o no_check_certificate -o enable_noobj_cache -o use_cache=/mnt/s3fs-cache $BUCKET /mnt/$BUCKET
-  echo "c.NotebookApp.notebook_dir = '/mnt/$BUCKET/$FOLDER'" >> ~/.jupyter/jupyter_notebook_config.py
+  echo "c.NotebookApp.notebook_dir = 'pyspark-tutorials/'" >> ~/.jupyter/jupyter_notebook_config.py
   echo "c.ContentsManager.checkpoints_kwargs = {'root_dir': '.checkpoints'}" >> ~/.jupyter/jupyter_notebook_config.py
-  else
-    echo "c.NotebookApp.notebook_dir = '$NOTEBOOK_DIR'" >> ~/.jupyter/jupyter_notebook_config.py
-    echo "c.ContentsManager.checkpoints_kwargs = {'root_dir': '.checkpoints'}" >> ~/.jupyter/jupyter_notebook_config.py
-  fi
 fi
+
 
 cd /mnt
 curl https://bintray.com/sbt/rpm/rpm | sudo tee /etc/yum.repos.d/bintray-sbt-rpm.repo
@@ -249,7 +221,7 @@ sudo jupyter toree install --interpreters=$INTERPRETERS --spark_home=$SPARK_HOME
 
 echo "Starting Jupyter notebook via pyspark"
 cd ~
-#PYSPARK_DRIVER_PYTHON=jupyter PYSPARK_DRIVER_PYTHON_OPTS="notebook --no-browser" pyspark > /var/log/jupyter.log &
+
 sudo puppet apply << PUPPET_SCRIPT
 include 'upstart'
 upstart::job { 'jupyter':
