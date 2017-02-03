@@ -1,3 +1,8 @@
+
+# WARNING - IN DEVELOPMENT
+
+Recent changes may have significantly changed/affected functionality. Stable versions coming soon (hopefully).
+
 # spark-social-science
 Automated Spark Cluster Builds with RStudio or PySpark for Policy Research.<br>
 [Comments welcome on Github or on Twitter @alexcengler]
