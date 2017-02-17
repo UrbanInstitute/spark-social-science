@@ -28,6 +28,8 @@ then
   IS_MASTER=true
 fi
 
+
+
 # error message
 error_msg ()
 {
@@ -235,20 +237,24 @@ cat /tmp/Renvextra | sudo  tee -a /usr/lib64/R/etc/Renviron
 fi
 
 
+
+background_install_proc() {
+
 # install SparkR 
-if [ "$IS_MASTER" = true -a "$SPARKR" = true ]; then 
+if [ "$SPARKR" = true ]; then 
 
   # Wait for SparkR to be installed:
   while [ ! -d /usr/lib/spark/R/lib/SparkR ]
   do
-    sleep 5
+    sleep 10
   done
 
-  sleep 5
+  echo "Found /usr/lib/spark/R/lib/SparkR"
 
   sudo R --no-save << EOF
 library(devtools)
 install('/usr/lib/spark/R/lib/SparkR')
+
 # here you can add your required packages which should be installed on ALL nodes
 # install.packages(c(''), repos="http://cran.rstudio.com", INSTALL_opts=c('--byte-compile') )
 EOF
@@ -286,3 +292,7 @@ fi
 
 sudo rstudio-server restart
 echo "rstudio server and packages installation completed"
+
+}
+
+background_install_proc &
