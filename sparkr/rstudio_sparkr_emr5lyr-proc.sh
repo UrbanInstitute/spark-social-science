@@ -1,6 +1,5 @@
 #!/bin/bash
 set -x -e
-
 # AWS EMR bootstrap script 
 # for installing SparkR & RStudio on on AWS EMR 5.3 with Spark 2.1.0 
 #
