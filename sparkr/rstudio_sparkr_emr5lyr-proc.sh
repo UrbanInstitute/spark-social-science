@@ -232,7 +232,7 @@ SPARK_CONF_DIR="/usr/lib/spark/conf"
 PATH=${PWD}:${PATH}
 EOF
 cat /tmp/Renvextra | sudo  tee -a /usr/lib64/R/etc/Renviron
-
+fi
 
 # install SparkR 
 if [ "$SPARKR" = true ]; then 
