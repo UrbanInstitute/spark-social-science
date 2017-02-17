@@ -234,8 +234,17 @@ EOF
 cat /tmp/Renvextra | sudo  tee -a /usr/lib64/R/etc/Renviron
 fi
 
+
 # install SparkR 
-if [ "$SPARKR" = true ]; then 
+if [ "$IS_MASTER" = true -a "$SPARKR" = true ]; then 
+
+  # Wait for SparkR to be installed:
+  while [ ! -d/usr/lib/spark/R/lib/SparkR ]
+  do
+    sleep 5
+  done
+
+  sleep 5
 
   sudo R --no-save << EOF
 library(devtools)
