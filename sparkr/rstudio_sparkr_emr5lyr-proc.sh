@@ -239,7 +239,7 @@ fi
 if [ "$IS_MASTER" = true -a "$SPARKR" = true ]; then 
 
   # Wait for SparkR to be installed:
-  while [ ! -d/usr/lib/spark/R/lib/SparkR ]
+  while [ ! -d /usr/lib/spark/R/lib/SparkR ]
   do
     sleep 5
   done
