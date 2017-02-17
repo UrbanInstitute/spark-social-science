@@ -95,7 +95,6 @@ while [ $# -gt 0 ]; do
 done
 
 
-
 sudo yum install -y xorg-x11-xauth.x86_64 xorg-x11-server-utils.x86_64 xterm libXt libX11-devel libXt-devel libcurl-devel git
 
 export MAKE='make -j 8'
@@ -234,13 +233,6 @@ PATH=${PWD}:${PATH}
 EOF
 cat /tmp/Renvextra | sudo  tee -a /usr/lib64/R/etc/Renviron
 
-# wait SparkR file to show up
-while [ ! -d /usr/lib/spark/R/lib/SparkR ]
-do
-  sleep 5
-done
-sleep 5
-fi
 
 # install SparkR 
 if [ "$SPARKR" = true ]; then 
