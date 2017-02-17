@@ -8,18 +8,15 @@ set -x -e
 # 
 ##############################
 
-
 # Usage:
 # --no-rstudio - don't install rstudio-server
-# --sparklyr - install RStudio's sparklyr package
+# --no-sparklyr - install RStudio's sparklyr package
 # --sparkr - install SparkR package
 # --shiny - install Shiny server
 # --no-tutorials - does not copy in Urban Institute SparkR Tutorials from GitHub
-#
 # --user - set user for rstudio, default "hadoop"
 # --user-pw - set user-pw for user USER, default "hadoop"
 # --rstudio-port - set rstudio port, default 8787
-#
 # --rhdfs - install rhdfs package, default false
 # --plyrmr - install plyrmr package, default false
 # --no-updateR - don't update latest R version
@@ -39,69 +36,66 @@ error_msg ()
 }
 
 # get input parameters
+SPARKR=true
+SPARKLYR=true
 RSTUDIO=true
 SHINY=false
 SPARKR_TUTORIALS=true
-USER="hadoop"
-USERPW="hadoop"
 PLYRMR=false
 RHDFS=false
 UPDATER=true
 RSTUDIOPORT=8787
-SPARKR=false
-SPARKR_PKG=false
-SPARKLYR=true
+
+USER="hadoop"
+USERPW="hadoop"
+
 while [ $# -gt 0 ]; do
-	case "$1" in
-		--no-sparklyr)
-			SPARKLYR=false
-			;;
-		--no-rstudio)
-			RSTUDIO=false
-			;;
-		--shiny)
-			SHINY=true
-			;;
-    --no-tutorials)
-      SPARKR_TUTORIALS=false
-      ;;
-		--plyrmr)
-			PLYRMR=true
-			;;
-		--rhdfs)
-			RHDFS=true
-			;;
-  	--updateR)
-      UPDATER=true
-  		;;
-		--no-updateR)
-			UPDATER=false
-			;;
-    --sparkr)
-    	SPARKR=true
-    	;;
-    --rstudio-port)
+    case "$1" in
+      --no-sparklyr)
+        SPARKLYR=false
+        ;;
+      --no-rstudio)
+        RSTUDIO=false
+        ;;
+      --shiny)
+        SHINY=true
+        ;;
+      --no-tutorials)
+        SPARKR_TUTORIALS=false
+        ;;
+      --plyrmr)
+        PLYRMR=true
+        ;;
+      --rhdfs)
+        RHDFS=true
+        ;;
+      --no-updateR)
+        UPDATER=false
+        ;;
+      --rstudio-port)
+        shift
+        RSTUDIOPORT=$1
+        ;;
+      --user)
+        shift
+        USER=$1
+        ;;
+      --user-pw)
+        shift
+        USERPW=$1
+        ;;
+      -*)
+        # do not exit out, just note failure
+        error_msg "unrecognized option: $1"
+        ;;
+      *)
+        break;
+        ;;
+      esac
       shift
-      RSTUDIOPORT=$1
-      ;;
-		--user)
-		   shift
-		   USER=$1
-		   ;;
- 		--user-pw)
- 		   shift
- 		   USERPW=$1
- 		   ;;
-		-*)
-			# do not exit out, just note failure
-			error_msg "unrecognized option: $1"
-			;;
-		*)
-			break;
-			;;
-	esac
-	shift
 done
+
+
 
 sudo yum install -y xorg-x11-xauth.x86_64 xorg-x11-server-utils.x86_64 xterm libXt libX11-devel libXt-devel libcurl-devel git
 
@@ -146,8 +140,7 @@ sudo yum install -y curl-devel
 sudo R CMD javareconf
 
 
-# install rstudio
-# only run if master node
+# Install rstudio only run if master node
 if [ "$IS_MASTER" = true -a "$RSTUDIO" = true ]; then
   # install Rstudio server
   # please check and update for latest RStudio version
@@ -209,7 +202,7 @@ EOF
 	sudo R CMD INSTALL --byte-compile plyrmr 
 fi
 
-if [ "$SPARKR" = true ] || [ "$SPARKLYR" = true ] || [ "$SPARKR_PKG" = true ]; then 
+if [ "$SPARKR" = true ] || [ "$SPARKLYR" = true ]; then 
 cat << 'EOF' > /tmp/Renvextra
 JAVA_HOME="/etc/alternatives/jre"
 HADOOP_HOME_WARN_SUPPRESS="true"
@@ -250,18 +243,10 @@ done
 sleep 5
 fi
 
-# install SparkR
+# install SparkR 
 if [ "$SPARKR" = true ]; then 
-  #the following are needed only if not login in as hadoop
-  sudo mkdir /mnt/spark
-  sudo chmod a+rwx /mnt/spark
 
-  if [ -d /mnt1 ]; then
-    sudo mkdir /mnt1/spark
-    sudo chmod a+rwx /mnt1/spark
-  fi
-  
-  	sudo R --no-save << EOF
+  sudo R --no-save << EOF
 library(devtools)
 install('/usr/lib/spark/R/lib/SparkR')
 # here you can add your required packages which should be installed on ALL nodes
@@ -271,7 +256,7 @@ fi
 
 if [ "$SPARKLYR" = true ]; then
 	sudo R --no-save << EOF
-  install.packages(c('sparklyr', 'dplyr', 'Lahman', 'R.methodsS3', 'Hmisc', 'memoise', 'rjson', 'data.table', 'ggplot2', 'DBI'),
+  install.packages(c('sparklyr', 'dplyr', 'nycflights13', 'Lahman', 'R.methodsS3', 'Hmisc', 'memoise', 'rjson', 'data.table', 'ggplot2', 'DBI'),
   repos="http://cran.rstudio.com" )
 EOF
 fi
