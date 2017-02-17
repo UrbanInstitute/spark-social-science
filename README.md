@@ -7,7 +7,7 @@ Recent changes may have significantly changed/affected functionality. Stable ver
 Automated Spark Cluster Builds with RStudio or PySpark for Policy Research.<br>
 [Comments welcome on Github or on Twitter @alexcengler]
 
-The goal of this project is to deliver powerful and elastic Spark clusters to researchers and data analysts with as little setup time and effort possible. To do that, at the Urban Institute, we use two critical components: (1) a Amazon Web Services (AWS) CloudFormation script to launch AWS Elastic MapReduce (EMR) clusters (2) a bootstrap script that runs on the Master node of the new cluster to install statistical programs and development environments (RStudio and Jupyter Notebooks). 
+The goal of this project is to deliver powerful and elastic Spark clusters to researchers and data analysts with as little setup time and effort possible. To do that, at the Urban Institute, we use two critical components: (1) a Amazon Web Services (AWS) CloudFormation script to launch AWS Elastic MapReduce (EMR) clusters (2) a bootstrap script that runs on the Master node of the new cluster to install statistical programs and development environments (RStudio and Jupyter Notebooks). Further down, you can also look at an AWS Command Line approach to using the bootstrap scripts.
 
 This guide illustrates the (relatively) straight forward process to provide clusters for your analysts and researchers. For more information about using Spark via the R and Python APIs, see these repositories:
 
@@ -39,11 +39,11 @@ The CloudFormation Script needs a few changes to work as well.
 <ul>
 	<li>Replace the phrase 'your-bucket-name-goes-here' with the name of the bucket you created a minute ago for your bootstrap scripts.</li>
 	<li>Create a new S3 bucket for the logs from your clusters, and replace the phrase "logs-bucket-name-goes-here" with the name of your new bucket.</li>
-	<li>Change the CIDR IP to your organzation's or your personal computer's IP. This will only allow your organization or your computer to access the ports you are opening for RStudio / Jupyter / Ganglia. This is optional, but know that if you do not do this, <font3 color="red">anyone can access your cluster at these ports.</font3></li>
+	<li>Change the CIDR IP to your organzation's or your personal computer's IP. This will only allow your organization or your computer to access the ports you are opening for RStudio / Jupyter / Ganglia. This is optional, but know that if you do not do this, anyone can access your cluster at these ports.</li>
 </ul>
 
 
-### 3. Launch a Cluster with CloudFormation
+### 3.a. Launch a Cluster with CloudFormation
 
 <ul>
 	<li>Go to CloudFormation on the AWS Dashboard - Hit Create Stack</li> 
@@ -66,6 +66,25 @@ The CloudFormation Script needs a few changes to work as well.
 		</ul>
 	</li>
 </ul>
+
+### 3.b. Launch a Cluster with the AWS Command Line
+
+If you have installed and configured the AWS Command Line Interfance (CLI), you can run a single line to create a cluster. Note the CloudFormation scripts creates a security group during bootstrap and assigns it to the cluster. Below, you have to assign an existing security group `addtl-master-security-group` that opens up the correct port (8787 for RStudio and 8194 for Jupyter).
+
+```shell
+aws emr create-cluster --release-label emr-5.3.1 ^
+  --name 'rstudio-sparkr-3-1' ^
+  --applications Name=Spark Name=Ganglia ^
+  --ec2-attributes KeyName=your-key-pair,InstanceProfile=EMR_EC2_DefaultRole,AdditionalMasterSecurityGroups="addtl-master-security-group",SubnetId="your-subnet" ^
+  --service-role EMR_DefaultRole ^
+  --instance-groups ^
+    InstanceGroupType=MASTER,InstanceCount=1,InstanceType=m4.xlarge ^
+    InstanceGroupType=CORE,InstanceCount=2,InstanceType=m4.xlarge ^
+  --region us-east-1 ^
+  --log-uri s3://logs-bucket-name-goes-here ^
+  --bootstrap-actions Path="s3://your-bucket-name-goes-here/rstudio_sparkr_emr5lyr.sh"
+```
+
 
 ## Choosing Between SparkR & PySpark for Social Science
 
