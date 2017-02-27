@@ -82,8 +82,6 @@ sudo bash -c 'echo "* hard    nofile          1048576" >> /etc/security/limits.c
 sudo bash -c 'echo "session    required   pam_limits.so" >> /etc/pam.d/su'
 
 
-sudo puppet module install spantree-upstart
-
 RELEASE=$(cat /etc/system-release)
 REL_NUM=$(ruby -e "puts '$RELEASE'.split.last")
 
@@ -168,7 +166,7 @@ sudo jupyter contrib nbextension install --system
 sudo python -m pip install -U jupyter_nbextensions_configurator
 sudo jupyter nbextensions_configurator enable --system
 sudo python -m pip install -U ipywidgets
-sudo jupyter nbextension enable --py --sys-prepwdfix widgetsnbextension
+sudo jupyter nbextension enable --py --sys-prefix widgetsnbextension
 sudo python -m pip install -U gvmagic py_d3
 sudo python -m pip install -U ipython-sql rpy2
 
