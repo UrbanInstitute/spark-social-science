@@ -32,7 +32,7 @@ error_msg ()
 # Default parameters:
 PYTHON_PACKAGES=""
 DS_PACKAGES=true
-JUPYTER_PORT=8194
+JUPYTER_PORT=8192
 JUPYTER_PASSWORD=""
 PYSPARK_TUTORIALS=true
 INTERPRETERS="SQL,PySpark"
@@ -128,6 +128,7 @@ if [ ! "$PYTHON_PACKAGES" = "" ]; then
 fi
 
 
+
 if [ "$IS_MASTER" = true ]; then
 
 ## Configure Jupyter Options:
@@ -172,14 +173,6 @@ sudo python -m pip install -U gvmagic py_d3
 sudo python -m pip install -U ipython-sql rpy2
 
 
-if [[ $PYSPARK_TUTORIALS = true ]]; then
-  git clone https://github.com/UrbanInstitute/pyspark-tutorials.git
-
-  echo "c.NotebookApp.notebook_dir = 'pyspark-tutorials/'" >> ~/.jupyter/jupyter_notebook_config.py
-  echo "c.ContentsManager.checkpoints_kwargs = {'root_dir': '.checkpoints'}" >> ~/.jupyter/jupyter_notebook_config.py
-fi
-
-
 cd /mnt
 curl https://bintray.com/sbt/rpm/rpm | sudo tee /etc/yum.repos.d/bintray-sbt-rpm.repo
 sudo yum install docker sbt -y
@@ -189,6 +182,17 @@ cd incubator-toree/
 
 make -j8 dist
 make release || true 
+
+
+if [[ $PYSPARK_TUTORIALS = true ]]; then
+  git clone https://github.com/UrbanInstitute/pyspark-tutorials.git
+
+  echo "c.NotebookApp.notebook_dir = 'pyspark-tutorials/'" >> ~/.jupyter/jupyter_notebook_config.py
+  echo "c.ContentsManager.checkpoints_kwargs = {'root_dir': '.checkpoints'}" >> ~/.jupyter/jupyter_notebook_config.py
+fi
+
+
+
 
 background_install_proc() {
 while [ ! -f /etc/spark/conf/spark-defaults.conf ]
@@ -222,31 +226,13 @@ sudo jupyter toree install --interpreters=$INTERPRETERS --spark_home=$SPARK_HOME
 echo "Starting Jupyter notebook via pyspark"
 cd ~
 
-sudo puppet apply << PUPPET_SCRIPT
-include 'upstart'
-upstart::job { 'jupyter':
-  description    => 'Jupyter',
-  respawn        => true,
-  respawn_limit  => '0 10',
-  start_on       => 'runlevel [2345]',
-  stop_on        => 'runlevel [016]',
-  console        => 'output',
-  chdir          => '/home/hadoop',
-  script           => '
-  sudo su - hadoop > /var/log/jupyter.log 2>&1 <<BASH_SCRIPT
-  export NODE_PATH="$NODE_PATH"
-  export PYSPARK_DRIVER_PYTHON="jupyter"
-  export PYSPARK_DRIVER_PYTHON_OPTS="notebook --no-browser $SSL_OPTS_JUPYTER --log-level=INFO"
-  export NOTEBOOK_DIR="$NOTEBOOK_DIR"
-  pyspark
-BASH_SCRIPT
-  ',
-}
-PUPPET_SCRIPT
+sudo jupyter notebook --no-browser --port="$JUPYTER_PORT"
+
 }
 
 echo "Running background process to install Apacke Toree"
 background_install_proc &
 fi
+
 echo "Bootstrap action foreground process finished"
 

@@ -255,8 +255,6 @@ if [ "$SPARKR" = true ]; then
 library(devtools)
 install('/usr/lib/spark/R/lib/SparkR')
 
-# here you can add your required packages which should be installed on ALL nodes
-# install.packages(c(''), repos="http://cran.rstudio.com", INSTALL_opts=c('--byte-compile') )
 EOF
 fi
 
