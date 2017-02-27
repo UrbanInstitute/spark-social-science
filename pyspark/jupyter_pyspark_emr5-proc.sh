@@ -184,7 +184,7 @@ make release || true
 if [[ $PYSPARK_TUTORIALS = true ]]; then
   git clone https://github.com/UrbanInstitute/pyspark-tutorials.git
 
-  echo "c.NotebookApp.notebook_dir = 'pyspark-tutorials/'" >> ~/.jupyter/jupyter_notebook_config.py
+  echo "c.NotebookApp.notebook_dir = 'incubator-toree/pyspark-tutorials/'" >> ~/.jupyter/jupyter_notebook_config.py
   echo "c.ContentsManager.checkpoints_kwargs = {'root_dir': '.checkpoints'}" >> ~/.jupyter/jupyter_notebook_config.py
 fi
 
@@ -221,26 +221,9 @@ sudo jupyter toree install --interpreters=$INTERPRETERS --spark_home=$SPARK_HOME
 echo "Starting Jupyter notebook via pyspark"
 cd ~
 
-sudo puppet apply << PUPPET_SCRIPT
-include 'upstart'
-upstart::job { 'jupyter':
-  description    => 'Jupyter',
-  respawn        => true,
-  respawn_limit  => '0 10',
-  start_on       => 'runlevel [2345]',
-  stop_on        => 'runlevel [016]',
-  console        => 'output',
-  chdir          => '/home/hadoop',
-  script           => '
-  sudo su - hadoop > /var/log/jupyter.log 2>&1 <<BASH_SCRIPT
-  export NODE_PATH="$NODE_PATH"
-  export PYSPARK_DRIVER_PYTHON="jupyter"
-  export PYSPARK_DRIVER_PYTHON_OPTS="notebook --no-browser --log-level=INFO"
-  pyspark
-BASH_SCRIPT
-  ',
-}
-PUPPET_SCRIPT
+
+jupyter notebook --no-browser &
+
 }
 
 echo "Running background process to install Apacke Toree"
