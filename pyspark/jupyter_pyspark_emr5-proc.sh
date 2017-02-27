@@ -9,13 +9,12 @@ set -x -e
 ##############################
 
 # Usage:
+# --python-packages - install additional python packages
+# --no-ds-packages - turn off installation of data science python packages
 # --port - set the port for Jupyter notebook, default is 8192
 # --password - set the password for Jupyter notebook
 # --no-tutorials - stops git clone of Urban Institute PySpark tutorials
-# --ssl - enable ssl, make sure to use your own cert and key files to get rid of the warning
-# --copy-samples - copy sample notebooks to samples sub folder under the notebook folder
-
-
+# --toree-interpreters - set kernels for toree, defaults to PySpark and SparkSQL
 # check for master node
 IS_MASTER=false
 if grep isMaster /mnt/var/lib/info/instance.json | grep true;
@@ -82,6 +81,8 @@ sudo bash -c 'echo "* hard    nofile          1048576" >> /etc/security/limits.c
 sudo bash -c 'echo "session    required   pam_limits.so" >> /etc/pam.d/su'
 
 
+sudo puppet module install spantree-upstart
+
 RELEASE=$(cat /etc/system-release)
 REL_NUM=$(ruby -e "puts '$RELEASE'.split.last")
 
@@ -124,7 +125,6 @@ sudo ln -sf /usr/local/bin/jupyter /usr/bin/
 if [ ! "$PYTHON_PACKAGES" = "" ]; then
   sudo python -m pip install -U $PYTHON_PACKAGES || true
 fi
-
 
 
 if [ "$IS_MASTER" = true ]; then
@@ -181,15 +181,12 @@ cd incubator-toree/
 make -j8 dist
 make release || true 
 
-
 if [[ $PYSPARK_TUTORIALS = true ]]; then
   git clone https://github.com/UrbanInstitute/pyspark-tutorials.git
 
   echo "c.NotebookApp.notebook_dir = 'pyspark-tutorials/'" >> ~/.jupyter/jupyter_notebook_config.py
   echo "c.ContentsManager.checkpoints_kwargs = {'root_dir': '.checkpoints'}" >> ~/.jupyter/jupyter_notebook_config.py
 fi
-
-
 
 
 background_install_proc() {
@@ -224,8 +221,26 @@ sudo jupyter toree install --interpreters=$INTERPRETERS --spark_home=$SPARK_HOME
 echo "Starting Jupyter notebook via pyspark"
 cd ~
 
-sudo jupyter notebook --no-browser --port="$JUPYTER_PORT"
-
+sudo puppet apply << PUPPET_SCRIPT
+include 'upstart'
+upstart::job { 'jupyter':
+  description    => 'Jupyter',
+  respawn        => true,
+  respawn_limit  => '0 10',
+  start_on       => 'runlevel [2345]',
+  stop_on        => 'runlevel [016]',
+  console        => 'output',
+  chdir          => '/home/hadoop',
+  script           => '
+  sudo su - hadoop > /var/log/jupyter.log 2>&1 <<BASH_SCRIPT
+  export NODE_PATH="$NODE_PATH"
+  export PYSPARK_DRIVER_PYTHON="jupyter"
+  export PYSPARK_DRIVER_PYTHON_OPTS="notebook --no-browser --log-level=INFO"
+  pyspark
+BASH_SCRIPT
+  ',
+}
+PUPPET_SCRIPT
 }
 
 echo "Running background process to install Apacke Toree"
