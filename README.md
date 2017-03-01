@@ -1,7 +1,7 @@
 
-# WARNING - IN DEVELOPMENT
+# WARNING - PYSPARK IN DEVELOPMENT
 
-Recent changes may have significantly changed/affected functionality. Stable versions coming soon (hopefully).
+Recent changes may have significantly changed/affected functionality. The SparkR functionality is now considered stable, and further development will happen outside of the master branch.
 
 # spark-social-science
 Automated Spark Cluster Builds with RStudio or PySpark for Policy Research.<br>
