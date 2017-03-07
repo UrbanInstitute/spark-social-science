@@ -188,6 +188,8 @@ if [[ $PYSPARK_TUTORIALS = true ]]; then
   echo "c.ContentsManager.checkpoints_kwargs = {'root_dir': '.checkpoints'}" >> ~/.jupyter/jupyter_notebook_config.py
 fi
 
+fi
+
 
 background_install_proc() {
 while [ ! -f /etc/spark/conf/spark-defaults.conf ]
