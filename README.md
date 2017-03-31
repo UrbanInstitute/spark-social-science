@@ -72,8 +72,8 @@ The CloudFormation Script needs a few changes to work as well.
 If you have installed and configured the AWS Command Line Interfance (CLI), you can run a single line to create a cluster. Note the CloudFormation scripts creates a security group during bootstrap and assigns it to the cluster. Below, you have to assign an existing security group `addtl-master-security-group` that opens up the correct port (8787 for RStudio and 8194 for Jupyter).
 
 ```shell
-aws emr create-cluster --release-label emr-5.3.1 ^
-  --name 'rstudio-sparkr-3-1' ^
+aws emr create-cluster --release-label emr-5.4.0 ^
+  --name 'rstudio-sparkr' ^
   --applications Name=Spark Name=Ganglia ^
   --ec2-attributes KeyName=your-key-pair,InstanceProfile=EMR_EC2_DefaultRole,AdditionalMasterSecurityGroups="addtl-master-security-group",SubnetId="your-subnet" ^
   --service-role EMR_DefaultRole ^
