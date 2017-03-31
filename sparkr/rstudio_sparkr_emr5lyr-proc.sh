@@ -237,9 +237,7 @@ cat /tmp/Renvextra | sudo  tee -a /usr/lib64/R/etc/Renviron
 fi
 
 
-
 background_install_proc() {
-
 
 # install SparkR 
 if [ "$SPARKR" = true ]; then 
@@ -275,7 +273,7 @@ EOF
 fi
 
 
-if [ "$IS_MASTER" = true -a "$SHINY" = true ]; then
+if [ "$SHINY" = true ]; then
   # install Shiny server
   wget https://download3.rstudio.org/centos5.9/x86_64/shiny-server-1.4.1.759-rh5-x86_64.rpm
   sudo yum install --nogpgcheck -y shiny-server-1.4.1.759-rh5-x86_64.rpm
@@ -302,4 +300,10 @@ echo "rstudio server and packages installation completed"
 
 }
 
-background_install_proc &
+if [ "$IS_MASTER" = true ]; then 
+  background_install_proc &
+fi
+
+if [ "$IS_MASTER" = false ]; then 
+  echo "Bootstrap completed on worker nodes"
+fi
