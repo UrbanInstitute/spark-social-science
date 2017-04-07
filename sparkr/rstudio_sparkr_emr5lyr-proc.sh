@@ -252,7 +252,7 @@ if [ "$SPARKR" = true ]; then
 
 
   ### Install additional jars - such as mysql-connector:
-  aws s3 cp s3://ui-spark-social-science/emr-util/mysql-connector-java-5.1.41.tar.gz .
+  aws s3 cp s3://ui-spark-social-science-public/emr-util/mysql-connector-java-5.1.41.tar.gz .
   tar -xvzf mysql-connector-java-5.1.41.tar.gz
   sudo mv mysql-connector-java-5.1.41/mysql-connector-java-5.1.41-bin.jar /usr/lib/spark/jars
   rm -r mysql-connector-java-5.1.41

@@ -35,7 +35,6 @@ JUPYTER_PORT=8192
 JUPYTER_PASSWORD=""
 PYSPARK_TUTORIALS=true
 INTERPRETERS="SQL,PySpark"
-USER_SPARK_OPTS=""
 
 
 # get input parameters
@@ -175,17 +174,22 @@ if [ "$IS_MASTER" = true ]; then
   curl https://bintray.com/sbt/rpm/rpm | sudo tee /etc/yum.repos.d/bintray-sbt-rpm.repo
   sudo yum install docker sbt -y
 
+
   git clone https://github.com/apache/incubator-toree.git
   cd incubator-toree/
 
   make -j8 dist
   make release || true 
 
+  
   if [ $PYSPARK_TUTORIALS = true ]; then
+    cd /mnt
     git clone https://github.com/UrbanInstitute/pyspark-tutorials.git
 
-    echo "c.NotebookApp.notebook_dir = 'incubator-toree/pyspark-tutorials/'" >> ~/.jupyter/jupyter_notebook_config.py
+    echo "c.NotebookApp.notebook_dir = 'pyspark-tutorials/'" >> ~/.jupyter/jupyter_notebook_config.py
     echo "c.ContentsManager.checkpoints_kwargs = {'root_dir': '.checkpoints'}" >> ~/.jupyter/jupyter_notebook_config.py
+    
+    cd incubator-toree/
   fi
 fi
 
@@ -197,28 +201,14 @@ background_install_proc() {
   done
   echo "Found /etc/spark/conf/spark-defaults.conf"
 
-  aws s3 cp s3://ui-spark-social-science/emr-util/mysql-connector-java-5.1.41.tar.gz .
+  aws s3 cp s3://ui-spark-social-science-public/emr-util/mysql-connector-java-5.1.41.tar.gz .
   tar -xvzf mysql-connector-java-5.1.41.tar.gz
   sudo mv mysql-connector-java-5.1.41/mysql-connector-java-5.1.41-bin.jar /usr/lib/spark/jars
   rm -r mysql-connector-java-5.1.41
 
-  if ! grep "spark.jars.packages" /etc/spark/conf/spark-defaults.conf; then
-    sudo bash -c "echo 'spark.jars.packages              $SPARK_PACKAGES' >> /etc/spark/conf/spark-defaults.conf"
-  fi
-
   sudo python -m pip install /mnt/incubator-toree/dist/toree-pip
   export SPARK_HOME="/usr/lib/spark/"
 
-
-  if [ "$USER_SPARK_OPTS" = "" ]; then
-    SPARK_OPTS="--packages $SPARK_PACKAGES"
-  else
-    SPARK_OPTS=$USER_SPARK_OPTS
-    SPARK_PACKAGES=$(ruby -e "opts='$SPARK_OPTS'.split;pkgs=nil;opts.each_with_index{|o,i| pkgs=opts[i+1] if o.start_with?('--packages')};puts pkgs || '$SPARK_PACKAGES'")
-  fi
-
-  export SPARK_OPTS
-  export SPARK_PACKAGES
 
   sudo jupyter toree install --interpreters=$INTERPRETERS --spark_home=$SPARK_HOME --spark_opts="$SPARK_OPTS"
 
@@ -227,18 +217,34 @@ background_install_proc() {
 
   cd /mnt
 
-  export NODE_PATH="$NODE_PATH"
-  export PYSPARK_DRIVER_PYTHON="jupyter"
-  export PYSPARK_DRIVER_PYTHON_OPTS="notebook --no-browser"
-  export NOTEBOOK_DIR="incubator-toree/pyspark-tutorials/"
-
-  pyspark
-
+  jupyter notebook
+  
 }
 
-echo "Running background process to install Apacke Toree"
-background_install_proc &
-fi
 
-pyspark
-echo "Bootstrap action foreground process finished"
+background_install_proc() {
+  sudo python -m pip install /mnt/incubator-toree/dist/toree-pip
+  export SPARK_HOME="/usr/lib/spark/"
+
+
+  sudo jupyter toree install --interpreters=$INTERPRETERS --spark_home=$SPARK_HOME --spark_opts="$SPARK_OPTS"
+
+  echo "Starting Jupyter notebook via pyspark"
+  cd ~
+
+  cd /mnt
+
+  jupyter notebook
+}
+
+
+if [ "$IS_MASTER" = true ]; then
+
+  echo "Running background process to install Apacke Toree"
+  touch error.txt
+  background_install_proc 2> error.txt &
+
+  echo "Master Node: Bootstrap action foreground process finished"
+else
+  echo "Worker Node: Boostrap Action Finished"
+fi
