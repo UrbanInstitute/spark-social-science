@@ -129,102 +129,110 @@ fi
 
 if [ "$IS_MASTER" = true ]; then
 
-## Configure Jupyter Options:
-mkdir -p ~/.jupyter
-touch ls ~/.jupyter/jupyter_notebook_config.py
+  ## Configure Jupyter Options:
+  mkdir -p ~/.jupyter
+  touch ls ~/.jupyter/jupyter_notebook_config.py
 
-sed -i '/c.NotebookApp.open_browser/d' ~/.jupyter/jupyter_notebook_config.py
-echo "c.NotebookApp.open_browser = False" >> ~/.jupyter/jupyter_notebook_config.py
+  sed -i '/c.NotebookApp.open_browser/d' ~/.jupyter/jupyter_notebook_config.py
+  echo "c.NotebookApp.open_browser = False" >> ~/.jupyter/jupyter_notebook_config.py
 
-sed -i '/c.NotebookApp.port/d' ~/.jupyter/jupyter_notebook_config.py
-echo "c.NotebookApp.port = $JUPYTER_PORT" >> ~/.jupyter/jupyter_notebook_config.py
+  sed -i '/c.NotebookApp.port/d' ~/.jupyter/jupyter_notebook_config.py
+  echo "c.NotebookApp.port = $JUPYTER_PORT" >> ~/.jupyter/jupyter_notebook_config.py
 
-sed -i '/c.NotebookApp.ip/d' ~/.jupyter/jupyter_notebook_config.py
-echo "c.NotebookApp.ip = '*'" >> ~/.jupyter/jupyter_notebook_config.py
+  sed -i '/c.NotebookApp.ip/d' ~/.jupyter/jupyter_notebook_config.py
+  echo "c.NotebookApp.ip = '*'" >> ~/.jupyter/jupyter_notebook_config.py
 
-sed -i '/c.NotebookApp.MultiKernelManager.default_kernel_name/d' ~/.jupyter/jupyter_notebook_config.py
-echo "c.NotebookApp.MultiKernelManager.default_kernel_name = 'pyspark'" >> ~/.jupyter/jupyter_notebook_config.py
+  sed -i '/c.NotebookApp.MultiKernelManager.default_kernel_name/d' ~/.jupyter/jupyter_notebook_config.py
+  echo "c.NotebookApp.MultiKernelManager.default_kernel_name = 'pyspark'" >> ~/.jupyter/jupyter_notebook_config.py
 
-if [ ! "$JUPYTER_PASSWORD" = "" ]; then
-  sed -i '/c.NotebookApp.password/d' ~/.jupyter/jupyter_notebook_config.py
-  HASHED_PASSWORD=$(python -c "from notebook.auth import passwd; print(passwd('$JUPYTER_PASSWORD'))")
-  echo "c.NotebookApp.password = u'$HASHED_PASSWORD'" >> ~/.jupyter/jupyter_notebook_config.py
-else
-  sed -i '/c.NotebookApp.token/d' ~/.jupyter/jupyter_notebook_config.py
-  echo "c.NotebookApp.token = u''" >> ~/.jupyter/jupyter_notebook_config.py
-fi
-
-echo "c.Authenticator.admin_users = {'hadoop'}" >> ~/.jupyter/jupyter_notebook_config.py
-echo "c.LocalAuthenticator.create_system_users = True" >> ~/.jupyter/jupyter_notebook_config.py
+  if [ ! "$JUPYTER_PASSWORD" = "" ]; then
+    sed -i '/c.NotebookApp.password/d' ~/.jupyter/jupyter_notebook_config.py
+    HASHED_PASSWORD=$(python -c "from notebook.auth import passwd; print(passwd('$JUPYTER_PASSWORD'))")
+    echo "c.NotebookApp.password = u'$HASHED_PASSWORD'" >> ~/.jupyter/jupyter_notebook_config.py
+  else
+    sed -i '/c.NotebookApp.token/d' ~/.jupyter/jupyter_notebook_config.py
+    echo "c.NotebookApp.token = u''" >> ~/.jupyter/jupyter_notebook_config.py
+  fi
 
 
-sudo python -m pip install -U notebook ipykernel
-sudo python -m ipykernel install
-
-sudo python -m pip install -U jupyter_contrib_nbextensions
-sudo jupyter contrib nbextension install --system
-sudo python -m pip install -U jupyter_nbextensions_configurator
-sudo jupyter nbextensions_configurator enable --system
-sudo python -m pip install -U ipywidgets
-sudo jupyter nbextension enable --py --sys-prefix widgetsnbextension
-sudo python -m pip install -U gvmagic py_d3
-sudo python -m pip install -U ipython-sql rpy2
+  echo "c.Authenticator.admin_users = {'hadoop'}" >> ~/.jupyter/jupyter_notebook_config.py
+  echo "c.LocalAuthenticator.create_system_users = True" >> ~/.jupyter/jupyter_notebook_config.py
 
 
-cd /mnt
-curl https://bintray.com/sbt/rpm/rpm | sudo tee /etc/yum.repos.d/bintray-sbt-rpm.repo
-sudo yum install docker sbt -y
+  sudo python -m pip install -U notebook ipykernel
+  sudo python -m ipykernel install
 
-git clone https://github.com/apache/incubator-toree.git
-cd incubator-toree/
+  sudo python -m pip install -U jupyter_contrib_nbextensions
+  sudo jupyter contrib nbextension install --system
+  sudo python -m pip install -U jupyter_nbextensions_configurator
+  sudo jupyter nbextensions_configurator enable --system
+  sudo python -m pip install -U ipywidgets
+  sudo jupyter nbextension enable --py --sys-prefix widgetsnbextension
+  sudo python -m pip install -U gvmagic py_d3
+  sudo python -m pip install -U ipython-sql rpy2
 
-make -j8 dist
-make release || true 
 
-if [[ $PYSPARK_TUTORIALS = true ]]; then
-  git clone https://github.com/UrbanInstitute/pyspark-tutorials.git
+  curl https://bintray.com/sbt/rpm/rpm | sudo tee /etc/yum.repos.d/bintray-sbt-rpm.repo
+  sudo yum install docker sbt -y
 
-  echo "c.NotebookApp.notebook_dir = 'incubator-toree/pyspark-tutorials/'" >> ~/.jupyter/jupyter_notebook_config.py
-  echo "c.ContentsManager.checkpoints_kwargs = {'root_dir': '.checkpoints'}" >> ~/.jupyter/jupyter_notebook_config.py
-fi
+  git clone https://github.com/apache/incubator-toree.git
+  cd incubator-toree/
 
+  make -j8 dist
+  make release || true 
+
+  if [ $PYSPARK_TUTORIALS = true ]; then
+    git clone https://github.com/UrbanInstitute/pyspark-tutorials.git
+
+    echo "c.NotebookApp.notebook_dir = 'incubator-toree/pyspark-tutorials/'" >> ~/.jupyter/jupyter_notebook_config.py
+    echo "c.ContentsManager.checkpoints_kwargs = {'root_dir': '.checkpoints'}" >> ~/.jupyter/jupyter_notebook_config.py
+  fi
 fi
 
 
 background_install_proc() {
-while [ ! -f /etc/spark/conf/spark-defaults.conf ]
-do
-  sleep 10
-done
-echo "Found /etc/spark/conf/spark-defaults.conf"
-if ! grep "spark.jars.packages" /etc/spark/conf/spark-defaults.conf; then
-  sudo bash -c "echo 'spark.jars.packages              $SPARK_PACKAGES' >> /etc/spark/conf/spark-defaults.conf"
-fi
+  while [ ! -f /etc/spark/conf/spark-defaults.conf ]
+  do
+    sleep 10
+  done
+  echo "Found /etc/spark/conf/spark-defaults.conf"
 
-sudo python -m pip install /mnt/incubator-toree/dist/toree-pip
-export SPARK_HOME="/usr/lib/spark/"
+  aws s3 cp s3://ui-spark-social-science/emr-util/mysql-connector-java-5.1.41.tar.gz .
+  tar -xvzf mysql-connector-java-5.1.41.tar.gz
+  sudo mv mysql-connector-java-5.1.41/mysql-connector-java-5.1.41-bin.jar /usr/lib/spark/jars
+  rm -r mysql-connector-java-5.1.41
 
-SPARK_PACKAGES="com.databricks:spark-csv_2.11:1.5.0"
+  if ! grep "spark.jars.packages" /etc/spark/conf/spark-defaults.conf; then
+    sudo bash -c "echo 'spark.jars.packages              $SPARK_PACKAGES' >> /etc/spark/conf/spark-defaults.conf"
+  fi
 
-
-if [ "$USER_SPARK_OPTS" = "" ]; then
-  SPARK_OPTS="--packages $SPARK_PACKAGES"
-else
-  SPARK_OPTS=$USER_SPARK_OPTS
-  SPARK_PACKAGES=$(ruby -e "opts='$SPARK_OPTS'.split;pkgs=nil;opts.each_with_index{|o,i| pkgs=opts[i+1] if o.start_with?('--packages')};puts pkgs || '$SPARK_PACKAGES'")
-fi
-
-export SPARK_OPTS
-export SPARK_PACKAGES
-
-sudo jupyter toree install --interpreters=$INTERPRETERS --spark_home=$SPARK_HOME --spark_opts="$SPARK_OPTS"
+  sudo python -m pip install /mnt/incubator-toree/dist/toree-pip
+  export SPARK_HOME="/usr/lib/spark/"
 
 
-echo "Starting Jupyter notebook via pyspark"
-cd ~
+  if [ "$USER_SPARK_OPTS" = "" ]; then
+    SPARK_OPTS="--packages $SPARK_PACKAGES"
+  else
+    SPARK_OPTS=$USER_SPARK_OPTS
+    SPARK_PACKAGES=$(ruby -e "opts='$SPARK_OPTS'.split;pkgs=nil;opts.each_with_index{|o,i| pkgs=opts[i+1] if o.start_with?('--packages')};puts pkgs || '$SPARK_PACKAGES'")
+  fi
 
+  export SPARK_OPTS
+  export SPARK_PACKAGES
 
-jupyter notebook --no-browser &
+  sudo jupyter toree install --interpreters=$INTERPRETERS --spark_home=$SPARK_HOME --spark_opts="$SPARK_OPTS"
+
+  echo "Starting Jupyter notebook via pyspark"
+  cd ~
+
+  cd /mnt
+
+  export NODE_PATH="$NODE_PATH"
+  export PYSPARK_DRIVER_PYTHON="jupyter"
+  export PYSPARK_DRIVER_PYTHON_OPTS="notebook --no-browser"
+  export NOTEBOOK_DIR="incubator-toree/pyspark-tutorials/"
+
+  pyspark
 
 }
 
@@ -232,5 +240,5 @@ echo "Running background process to install Apacke Toree"
 background_install_proc &
 fi
 
+pyspark
 echo "Bootstrap action foreground process finished"
-
