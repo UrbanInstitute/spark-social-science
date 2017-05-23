@@ -82,7 +82,7 @@ aws emr create-cluster --release-label emr-5.4.0 ^
     InstanceGroupType=CORE,InstanceCount=2,InstanceType=m4.xlarge ^
   --region us-east-1 ^
   --log-uri s3://logs-bucket-name-goes-here ^
-  --bootstrap-actions Path="s3://your-bucket-name-goes-here/rstudio_sparkr_emr5lyr.sh"
+  --bootstrap-actions Path="s3://your-bucket-name-goes-here/rstudio_sparkr_emr5lyr-proc.sh"
 ```
 
 
