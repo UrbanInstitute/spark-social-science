@@ -2,13 +2,13 @@
 set -x -e
 
 # AWS EMR bootstrap script 
-# for installing Python and Jupyter Notebooks on AWS EMR 5.2 with Spark 2.0 
+# for installing Python and Jupyter Notebooks on AWS EMR 5.15.0 with Spark 2.3.0 
 ##
 # Adapted from work done by Tom Zeng of Amazon Web Services
 #
 ##############################
 
-# --port - set the port for Jupyter notebook, default is 8192
+# --port - set the port for Jupyter notebook, default is 8194
 # --password - set the password for Jupyter notebook
 # --notebook-dir - specify notebook folder, this could be a local directory or a S3 bucket
 # --ssl - enable ssl, make sure to use your own cert and key files to get rid of the warning
@@ -35,7 +35,7 @@ DS_PACKAGES=true
 JUPYTER_PORT=8194
 JUPYTER_PASSWORD=""
 
-NOTEBOOK_DIR="s3://ui-spark-social-science/pyspark-tutorials/notebooks"
+NOTEBOOK_DIR="/mnt/notebooks"
 
 INTERPRETERS="SQL,PySpark"
 USER_SPARK_OPTS=""
@@ -84,12 +84,10 @@ sudo bash -c 'echo "* soft    nofile          1048576" >> /etc/security/limits.c
 sudo bash -c 'echo "* hard    nofile          1048576" >> /etc/security/limits.conf'
 sudo bash -c 'echo "session    required   pam_limits.so" >> /etc/pam.d/su'
 
-
 sudo puppet module install spantree-upstart
 
 RELEASE=$(cat /etc/system-release)
 REL_NUM=$(ruby -e "puts '$RELEASE'.split.last")
-
 
 # move /usr/lib to /mnt/usr-moved/lib to avoid running out of space on /
 if [ ! -d /mnt/usr-moved ]; then
@@ -105,12 +103,10 @@ export MAKE='make -j 8'
 sudo yum install -y xorg-x11-xauth.x86_64 xorg-x11-server-utils.x86_64 xterm libXt libX11-devel libXt-devel libcurl-devel git graphviz cyrus-sasl cyrus-sasl-devel readline readline-devel
 sudo yum install --enablerepo=epel -y nodejs npm zeromq3 zeromq3-devel
 sudo yum install -y gcc-c++ patch zlib zlib-devel
-sudo  yum install -y libyaml-devel libffi-devel openssl-devel make
+sudo yum install -y libyaml-devel libffi-devel openssl-devel make
 sudo yum install -y bzip2 autoconf automake libtool bison iconv-devel sqlite devel
 
-
 export NODE_PATH='/usr/lib/node_modules'
-
 
 ## Python installations and packages, including jupyter:
 cd /mnt
@@ -119,7 +115,7 @@ sudo ln -sf /usr/local/bin/pip2.7 /usr/bin/pip
 
 sudo python -m pip install -U jupyter
 sudo python -m pip install -U matplotlib seaborn bokeh cython networkx findspark
-sudo python -m pip install -U mrjob pyhive sasl thrift thrift-sasl snakebite
+sudo python -m pip install -U pyhive sasl thrift thrift-sasl snakebite # Removed mrjob because of chardet install issues
 sudo python -m pip install -U scikit-learn pandas numpy numexpr statsmodels scipy
 
 sudo ln -sf /usr/local/bin/ipython /usr/bin/
@@ -130,12 +126,11 @@ if [ ! "$PYTHON_PACKAGES" = "" ]; then
   sudo python -m pip install -U $PYTHON_PACKAGES || true
 fi
 
-
 if [ "$IS_MASTER" = true ]; then
 
-## Configure Jupyter Options:
+## Configure Jupyter Options: (the sed statements allow you the permission to echo info into the config files)
 mkdir -p ~/.jupyter
-touch ls ~/.jupyter/jupyter_notebook_config.py
+sudo touch ls ~/.jupyter/jupyter_notebook_config.py
 
 sed -i '/c.NotebookApp.open_browser/d' ~/.jupyter/jupyter_notebook_config.py
 echo "c.NotebookApp.open_browser = False" >> ~/.jupyter/jupyter_notebook_config.py
@@ -160,7 +155,13 @@ fi
 
 echo "c.Authenticator.admin_users = {'hadoop'}" >> ~/.jupyter/jupyter_notebook_config.py
 echo "c.LocalAuthenticator.create_system_users = True" >> ~/.jupyter/jupyter_notebook_config.py
+echo "c.NotebookApp.tornado_settings = { 'headers': { 'Content-Security-Policy': \"frame-ancestors 'self' *\" } }" >> ~/.jupyter/jupyter_notebook_config.py
 
+mkdir -p ~/.jupyter/custom
+sudo touch ls ~/.jupyter/custom/custom.js
+
+sed -i '' ~/.jupyter/custom/custom.js
+echo "define(['base/js/namespace'], function(Jupyter){ Jupyter._target = '_self'; }); " >> ~/.jupyter/custom/custom.js
 
 sudo python -m pip install -U notebook ipykernel
 sudo python -m ipykernel install
@@ -172,9 +173,7 @@ sudo jupyter nbextensions_configurator enable --system
 sudo python -m pip install -U ipywidgets
 sudo jupyter nbextension enable --py --sys-prefix widgetsnbextension
 sudo python -m pip install -U gvmagic py_d3
-sudo python -m pip install -U ipython-sql rpy2
-
-
+sudo python -m pip install -U ipython-sql
 
 if [ ! "$NOTEBOOK_DIR" = "" ]; then
   NOTEBOOK_DIR="${NOTEBOOK_DIR%/}/" # remove trailing / if exists then add /
@@ -203,6 +202,13 @@ if [ ! "$NOTEBOOK_DIR" = "" ]; then
   echo "c.NotebookApp.notebook_dir = '/mnt/$BUCKET/$FOLDER'" >> ~/.jupyter/jupyter_notebook_config.py
   echo "c.ContentsManager.checkpoints_kwargs = {'root_dir': '.checkpoints'}" >> ~/.jupyter/jupyter_notebook_config.py
   else
+    sudo mkdir $NOTEBOOK_DIR
+    sudo git clone https://github.com/UrbanInstitute/pyspark-tutorials.git
+    cd pyspark-tutorials
+    sudo mv * $NOTEBOOK_DIR
+    sudo chown $USER:$USER -Rf $NOTEBOOK_DIR
+    cd $NOTEBOOK_DIR
+    sudo wget https://s3.amazonaws.com/ui-spark-social-science-public/emr-util/00_HMDA-ACS-linked-data-tutorial.ipynb
     echo "c.NotebookApp.notebook_dir = '$NOTEBOOK_DIR'" >> ~/.jupyter/jupyter_notebook_config.py
     echo "c.ContentsManager.checkpoints_kwargs = {'root_dir': '.checkpoints'}" >> ~/.jupyter/jupyter_notebook_config.py
   fi
@@ -211,12 +217,13 @@ fi
 cd /mnt
 curl https://bintray.com/sbt/rpm/rpm | sudo tee /etc/yum.repos.d/bintray-sbt-rpm.repo
 sudo yum install docker sbt -y
+sudo service docker restart
 
-git clone https://github.com/apache/incubator-toree.git
+sudo git clone https://github.com/apache/incubator-toree.git
 cd incubator-toree/
 
-make -j8 dist
-make release || true 
+sudo make -j8 dist
+sudo make release || true 
 
 background_install_proc() {
 while [ ! -f /etc/spark/conf/spark-defaults.conf ]
@@ -233,7 +240,6 @@ export SPARK_HOME="/usr/lib/spark/"
 
 SPARK_PACKAGES="com.databricks:spark-csv_2.11:1.5.0"
 
-
 if [ "$USER_SPARK_OPTS" = "" ]; then
   SPARK_OPTS="--packages $SPARK_PACKAGES"
 else
@@ -241,11 +247,17 @@ else
   SPARK_PACKAGES=$(ruby -e "opts='$SPARK_OPTS'.split;pkgs=nil;opts.each_with_index{|o,i| pkgs=opts[i+1] if o.start_with?('--packages')};puts pkgs || '$SPARK_PACKAGES'")
 fi
 
+### Install additional jars - such as mysql-connector:
+sudo aws s3 cp s3://ui-spark-social-science/emr-util/mysql-connector-java-5.1.41.tar.gz .
+sudo tar -xvzf mysql-connector-java-5.1.41.tar.gz
+sudo mv mysql-connector-java-5.1.41/mysql-connector-java-5.1.41-bin.jar /usr/lib/spark/jars
+sudo rm -r mysql-connector-java-5.1.41
+###
+
 export SPARK_OPTS
 export SPARK_PACKAGES
 
 sudo jupyter toree install --interpreters=$INTERPRETERS --spark_home=$SPARK_HOME --spark_opts="$SPARK_OPTS"
-
 
 echo "Starting Jupyter notebook via pyspark"
 cd ~
