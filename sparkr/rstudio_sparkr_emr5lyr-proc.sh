@@ -1,7 +1,7 @@
 #!/bin/bash
 set -x -e
 # AWS EMR bootstrap script 
-# for installing SparkR & RStudio on on AWS EMR 5.7.0 with Spark 2.1.0 
+# for installing SparkR & RStudio on on AWS EMR 5.3 with Spark 2.1.0 
 #
 # Adapted heavily from AWS Engineer Tom Zeng
 # 
@@ -43,12 +43,11 @@ SHINY=false
 SPARKR_TUTORIALS=true
 PLYRMR=false
 RHDFS=false
-UPDATER=true
 RSTUDIOPORT=8787
 NOTIFY=""
 
-USER="hadoop"
-USERPW="hadoop"
+USER="rstudio"
+USERPW="rstudio"
 
 ADRF=false
 
@@ -71,9 +70,6 @@ while [ $# -gt 0 ]; do
         ;;
       --rhdfs)
         RHDFS=true
-        ;;
-      --no-updateR)
-        UPDATER=false
         ;;
       --rstudio-port)
         shift
@@ -111,9 +107,7 @@ sudo yum install -y xorg-x11-xauth.x86_64 xorg-x11-server-utils.x86_64 xterm lib
 export MAKE='make -j 8'
 
 # install latest R version from AWS Repo
-if [ "$UPDATER" = true ]; then
-sudo yum update R-core R-base R-core-devel R-devel -y
-fi
+sudo yum install R-core R-base R-core-devel R-devel -y
 
 # create rstudio user on all machines
 # we need a unix user with home directory and password and hadoop permission
@@ -124,7 +118,6 @@ sudo sh -c "echo '$USERPW' | passwd $USER --stdin"
 
 sudo mkdir /mnt/r-stuff
 cd /mnt/r-stuff
-
 
 sudo sed -i 's/make/make -j 8/g' /usr/lib64/R/etc/Renviron
 
@@ -158,8 +151,8 @@ if [ "$IS_MASTER" = true -a "$RSTUDIO" = true ]; then
   # install Rstudio server
   # please check and update for latest RStudio version
     
-  sudo wget https://download2.rstudio.org/rstudio-server-rhel-1.1.383-x86_64.rpm
-  sudo yum install --nogpgcheck -y rstudio-server-rhel-1.1.383-x86_64.rpm
+  sudo wget https://download2.rstudio.org/rstudio-server-rhel-1.1.463-x86_64.rpm
+  sudo yum install --nogpgcheck -y rstudio-server-rhel-1.1.463-x86_64.rpm
   
   #wget https://download3.rstudio.org/centos5.9/x86_64/shiny-server-1.4.1.759-rh5-x86_64.rpm
   #sudo yum install --nogpgcheck -y shiny-server-1.4.1.759-rh5-x86_64.rpm
@@ -294,8 +287,8 @@ fi
 
 if [ "$SHINY" = true ]; then
   # install Shiny server
-  sudo wget https://download3.rstudio.org/centos5.9/x86_64/shiny-server-1.5.5.872-rh5-x86_64.rpm
-  sudo yum install --nogpgcheck -y shiny-server-1.5.5.872-rh5-x86_64.rpm
+  sudo wget https://download3.rstudio.org/centos6.3/x86_64/shiny-server-1.5.9.923-x86_64.rpm
+  sudo yum install --nogpgcheck -y shiny-server-1.5.9.923-x86_64.rpm
   
 sudo R --no-save << EOF
 install.packages(c('shiny'),
