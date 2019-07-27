@@ -1,7 +1,7 @@
 #!/bin/bash
 set -x -e
 # AWS EMR bootstrap script 
-# for installing SparkR & RStudio on on AWS EMR 5.20.0 with Spark 2.4.0 
+# for installing SparkR & RStudio on on AWS EMR 5.25.0 with Spark 2.4.3 
 #
 # Adapted heavily from AWS Engineer Tom Zeng
 # 
@@ -106,7 +106,7 @@ sudo yum install -y xorg-x11-xauth.x86_64 xorg-x11-server-utils.x86_64 xterm lib
 
 export MAKE='make -j 8'
 
-# install latest R version from AWS Repo
+# install latest R version - Note AWS makes it difficult to upgrade R versions on EMR instances, currently on 3.4 on EMR
 sudo yum install R-core R-base R-core-devel R-devel -y
 
 # create rstudio user on all machines
@@ -151,8 +151,8 @@ if [ "$IS_MASTER" = true -a "$RSTUDIO" = true ]; then
   # install Rstudio server
   # please check and update for latest RStudio version
     
-  sudo wget https://download2.rstudio.org/rstudio-server-rhel-1.1.463-x86_64.rpm
-  sudo yum install --nogpgcheck -y rstudio-server-rhel-1.1.463-x86_64.rpm
+  sudo wget https://download2.rstudio.org/server/centos6/x86_64/rstudio-server-rhel-1.2.1335-x86_64.rpm
+  sudo yum install --nogpgcheck -y rstudio-server-rhel-1.2.1335-x86_64.rpm
   
   #wget https://download3.rstudio.org/centos5.9/x86_64/shiny-server-1.4.1.759-rh5-x86_64.rpm
   #sudo yum install --nogpgcheck -y shiny-server-1.4.1.759-rh5-x86_64.rpm
